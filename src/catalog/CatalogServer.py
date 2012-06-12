@@ -696,11 +696,9 @@ def _user_check_login():
  
          
 def _delete_authentication_cookie():
-    response.set_cookie( 
+    
+    response.delete_cookie( 
         key=EXTENSION_COOKIE,
-        value='',
-        max_age=-1,
-        expires=0
     )
             
             
