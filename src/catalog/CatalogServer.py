@@ -754,6 +754,8 @@ if __name__ == '__main__' :
     PORT = 8080
     REALM = "http://www.prefstore.org:8080" 
     ROOT_PAGE = "/"
+    
+    #this is a test
     #LOCAL! REALM = "http://localhost:8080"
     #LOCAL! WEB_PROXY = "http://mainproxy.nottingham.ac.uk:8080"
 
