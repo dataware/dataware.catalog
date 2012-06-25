@@ -2,7 +2,7 @@
 Created on 12 August 2011
 @author: jog
 """
-import urllib
+import urllib2
 import re
 
 #///////////////////////////////////////////////
@@ -14,7 +14,7 @@ support_providers = [ "google", "yahoo", "aol", "myopenid" ]
 #///////////////////////////////////////////////
 
 
-def process( realm, return_to, provider, username=None ):
+def process( realm, return_to, provider, username = None, web_proxy = None ):
     
     if ( realm is None or return_to is None or provider is None ) :
         raise Exception( "Incorrect OpenID parameters supplied" )
@@ -32,6 +32,16 @@ def process( realm, return_to, provider, username=None ):
     if ( discovery_url is None ) :
         raise Exception( "Specified OpenID provider could not be found" )
     
+    #setup a web proxy if necessary
+    if ( web_proxy ):
+        try:
+            proxy = urllib2.ProxyHandler( 
+                { 'http' : web_proxy, 'https' : web_proxy } )
+            opener = urllib2.build_opener( proxy )
+            urllib2.install_opener( opener )
+        except:
+            raise Exception( "OpenID failure setting up proxy" )
+        
     #Attempt to contact that URL and discover the 
     #provider's OpenID endpoint     
     try:
@@ -72,7 +82,7 @@ def discover( discovery_url ):
         If this fails and exception will be thrown by the regex.
     """
     
-    result = urllib.urlopen( discovery_url ).read()
+    result = urllib2.urlopen( discovery_url ).read()
     m = re.search( "<URI>(.*)</URI>", result )
     if m is None :
         m = re.search( 
@@ -96,7 +106,7 @@ def createAssociation( endpoint_url ):
         "&openid.assoc_type=HMAC-SHA1" + \
         "&openid.session_type=no-encryption"
         
-    result = urllib.urlopen( url ).read()
+    result = urllib2.urlopen( url ).read()
     m = re.search( "assoc_handle:(.*)\n", result )
     return m.group( 1 ); 
 

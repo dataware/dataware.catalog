@@ -46,10 +46,7 @@ class CatalogDB( object ):
     TBL_CATALOG_RESOURCES = 'tblCatalogResources'
     TBL_CATALOG_INSTALLS = 'tblCatalogInstalls'    
     TBL_CATALOG_PROCESSORS = 'tblCatalogProcessors'
-    
-    CONFIG_FILE = "catalog.cfg"
-    SECTION_NAME = "CatalogDB"
-    
+        
     #///////////////////////////////////////
       
     createQueries = [ 
@@ -137,20 +134,19 @@ class CatalogDB( object ):
     #///////////////////////////////////////
     
     
-    def __init__( self, name = "CatalogDB" ):
+    def __init__( self, dbconfig ):
             
         #MysqlDb is not thread safe, so program may run more
         #than one connection. As such naming them is useful.
-        self.name = name
-        
-        Config = ConfigParser.ConfigParser()
-        Config.read( self.CONFIG_FILE )
-        self.hostname = Config.get( self.SECTION_NAME, "hostname" )
-        self.username =  Config.get( self.SECTION_NAME, "username" )
-        self.password =  Config.get( self.SECTION_NAME, "password" )
-        self.dbname = Config.get( self.SECTION_NAME, "dbname" )
-        self.connected = False;
-
+        self.name = "CatalogDB"
+        try:
+            self.hostname = dbconfig[ "hostname" ] 
+            self.username = dbconfig[ "username" ]
+            self.password = dbconfig[ "password" ]
+            self.dbname = dbconfig[ "dbname" ]
+            self.connected = False;
+        except:
+            raise Exception( "Insufficient config parameters")
         
     #///////////////////////////////////////
     
@@ -158,7 +154,7 @@ class CatalogDB( object ):
     def connect( self ):
         
         log.info( "%s: connecting to mysql database..." % self.name )
-
+        
         self.conn = MySQLdb.connect( 
             host=self.hostname,
             user=self.username,

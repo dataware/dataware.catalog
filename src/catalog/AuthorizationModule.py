@@ -84,7 +84,7 @@ class AuthorizationModule( object ) :
             raise Exception( "Database object parameter is missing" )
         
         if not web_proxy is None:
-            self._WEB_PROXY =  { 'http' : web_proxy }
+            self._WEB_PROXY =  { 'http' : web_proxy, 'https' : web_proxy, }
         
        
     #///////////////////////////////////////////////

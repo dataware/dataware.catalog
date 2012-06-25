@@ -393,9 +393,11 @@ def user_openid_login():
             realm=REALM,
             return_to=REALM + "/checkauth?" + urllib.quote( params ),
             provider=provider,
-            username=username
+            username=username,
+            web_proxy=WEB_PROXY
         )
     except Exception, e:
+        log.error( e.msg )
         return user_error( e )
     
     #Here we do a javascript redirect. A 302 redirect won't work
@@ -726,44 +728,49 @@ def _set_authentication_cookie( user_id, user_name = None ):
 if __name__ == '__main__' :
 
     #-------------------------------
+    # config constants
+    #-------------------------------
+    CONFIG_FILE = "catalog.cfg"
+    Config = ConfigParser.ConfigParser()
+    Config.read( CONFIG_FILE )
+    serverconfig = dict(  Config.items( "server" ) )
+    dbconfig = dict( Config.items( "db" ) )
+    
+    EXTENSION_COOKIE = serverconfig.get( "extension_cookie" )
+    PORT = serverconfig.get( "port" )
+    ROOT_PAGE = serverconfig.get( "root_page" )
+    REALM = serverconfig.get( "realm" )    
+    WEB_PROXY = serverconfig.get( "web_proxy" )
+    
+    if not EXTENSION_COOKIE : EXTENSION_COOKIE = "catalog_logged_in"
+    if not PORT : PORT = 80
+    if not ROOT_PAGE : ROOT_PAGE = "/"
+    if not REALM : REALM = "localhost:%s" % PORT
+    else : REALM += ":%s" % PORT
+    
+    print WEB_PROXY
+    #-------------------------------
     # setup logging
     #-------------------------------
     log = logging.getLogger( 'console_log' )
-    
-    # set logging levels
     log.setLevel( logging.DEBUG )
-   
-    # create handlers
     ch = logging.StreamHandler( sys.stdout )
         
     # create formatter and add it to the handlers
     formatter = logging.Formatter( '--- %(asctime)s [%(levelname)s] %(message)s' )
     ch.setFormatter( formatter )
-    
-    # add the handlers to the logger
     log.addHandler( ch )
 
     # redirect standard outputs
     sys.stdout = std_writer( "stdout" )
     sys.stderr = std_writer( "stderr" )
-       
-    #-------------------------------
-    # constants
-    #-------------------------------
-    EXTENSION_COOKIE = "catalog_logged_in"
-    PORT = 8080
-    REALM = "http://www.prefstore.org:8080" 
-    ROOT_PAGE = "/"
-    
-    #this is a test
-    #LOCAL! REALM = "http://localhost:8080"
-    #LOCAL! WEB_PROXY = "http://mainproxy.nottingham.ac.uk:8080"
 
+    
     #-------------------------------
     # initialization
     #-------------------------------
     try:
-        db = CatalogDB()
+        db = CatalogDB( dbconfig );
         db.connect()
         db.check_tables()
     except Exception, e:
@@ -771,14 +778,14 @@ if __name__ == '__main__' :
         exit()
         
     try:    
-        am = AuthorizationModule.AuthorizationModule( db )
+        am = AuthorizationModule.AuthorizationModule( db, WEB_PROXY )
     except Exception, e:
         log.error( "Authorization Module failure: %s" % ( e, ) )
         exit()
     
     try:
         debug( True )
-        run( host="0.0.0.0", port=PORT, quiet=False )
+        run( host="0.0.0.0", port=int( PORT ), quiet=False )
     except Exception, e:
         log.error( "Web Server Exception: %s" % ( e, ) )
         exit()
