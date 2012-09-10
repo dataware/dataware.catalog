@@ -39,7 +39,8 @@ class CatalogResource(db.Model):
 
 class CatalogInstall(db.Model):
     user_id = db.StringProperty()
-    resource_id = db.StringProperty()
+    #resource_id = db.StringProperty() 
+    resource = db.ReferenceProperty(CatalogResource)
     state = db.StringProperty()
     install_token = db.StringProperty()
     auth_code = db.StringProperty()
@@ -48,9 +49,9 @@ class CatalogInstall(db.Model):
 
 class CatalogProcessor(db.Model):
     user_id = db.StringProperty()
-    client_id = db.StringProperty()
+    client = db.ReferenceProperty(CatalogClient)
     state = db.StringProperty()
-    resource_id = db.StringProperty()  
+    resource = db.ReferenceProperty(CatalogResource)
     expiry_time = db.FloatProperty()
     query = db.TextProperty()
     checksum  = db.StringProperty()
@@ -188,7 +189,7 @@ class CatalogDB():
     def client_fetch_by_id( self, client_id ) :
         if not client_id: return None
         
-        q = db.Query(CatalogUser)
+        q = db.Query(CatalogClient)
         q.filter('client_id =', client_id)
         
         return q.get()
@@ -208,10 +209,9 @@ class CatalogDB():
     #////////////////////////////////////////////////////////////////////////////////////////////
     
     def resource_insert( self, resource_id, resource_name,
-        resource_uri, description, logo_uri, web_uri, namespace):
-       
+        resource_uri, description, logo_uri, web_uri, namespace):  
         resource = CatalogResource(resource_id=resource_id, resource_name=resource_name,
-        resource_uri=resource_uri, description=description, logo_uri=logo_uri, web_uri=web_uri, namespace=namespace, registered=registered)
+        resource_uri=resource_uri, description=description, logo_uri=logo_uri, web_uri=web_uri, namespace=namespace, registered=time.time())
         resource.put()
         
     #///////////////////////////////////////
@@ -240,10 +240,10 @@ class CatalogDB():
 
     
     #////////////////////////////////////////////////////////////////////////////////////////////
-    def install_insert( self, user_id, resource_id,
+    def install_insert( self, user_id, resource,
         state, install_token, auth_code ):
         
-        install = CatalogInstall( user_id=user_id, resource_id=resource_id,
+        install = CatalogInstall( user_id=user_id, resource=resource,
         state=state, install_token=install_token, auth_code=auth_code, created=time.time(), ctime=time.time() )
         
         install.put()
@@ -264,10 +264,12 @@ class CatalogDB():
     def install_fetch_by_name( self, user_id, resource_name ) :
 
         if not resource_name: return None
+       
+        ciq = db.Query(CatalogInstall)
+        ciq.filter('user_id =', user_id)
+        row = ciq.get()
     
-        q = GqlQuery("SELECT * FROM CatalogInstall i, CatalogResource r WHERE i.user_id = :1 AND i.resource_id = r.resource_id AND r.resource_name = :2",user_id,resource_name)
-        
-        return q.get()
+        return row
         
     #///////////////////////////////////////
               
@@ -289,13 +291,14 @@ class CatalogDB():
     #////////////////////////////////////////////////////////////////////////////////////////////
 
     def processor_insert( self, 
-        user_id, client_id, state, resource_name, 
+        user_id, client, state, resource, 
         expiry_time, query_code, request_status ):
-       
+     
         #create a SHA checksum for the file
         checksum = hashlib.sha1( query_code ).hexdigest()
         
-        processor = CatalogProcessor(user_id=user_id, client_id=client_id, state=state, resource_name=resource_name, expiry_time=expiry_time, query_code=query_code, request_status=request_status, created=time.time())
+        processor = CatalogProcessor(user_id=user_id, client=client, state=state,resource=resource, expiry_time=float(expiry_time), query_code=query_code, request_status=request_status, created=time.time())
+        
         
         processor.put()
         
@@ -413,20 +416,22 @@ class CatalogDB():
     def processors_fetch( self, user_id = None ):
       
         if user_id:
+            q = db.Query(CatalogProcessor)
+            q.filter('user_id =', user_id)
+            return q.fetch(limit=100)
             
-            query = """
-                SELECT s.*, t.client_name, r.resource_name
-                FROM %s.%s s, %s.%s t, %s.%s r
-                WHERE s.user_id = %s 
-                AND s.client_id = t.client_id
-                AND s.resource_id = r.resource_id
-            """ % ( 
-                self.DB_NAME, self.TBL_CATALOG_PROCESSORS, 
-                self.DB_NAME, self.TBL_CATALOG_CLIENTS,
-                self.DB_NAME, self.TBL_CATALOG_RESOURCES,  '%s' 
-            )
-
-            self.cursor.execute( query, ( user_id, ) )
-            return self.cursor.fetchall()
+            #query = """
+            #    SELECT s.*, t.client_name, r.resource_name
+            #    FROM %s.%s s, %s.%s t, %s.%s r
+            #    WHERE s.user_id = %s 
+            #    AND s.client_id = t.client_id
+            #    AND s.resource_id = r.resource_id
+            #""" % ( 
+            #    self.DB_NAME, self.TBL_CATALOG_PROCESSORS, 
+            #    self.DB_NAME, self.TBL_CATALOG_CLIENTS,
+            #    self.DB_NAME, self.TBL_CATALOG_RESOURCES,  '%s' 
+            #)
+            #self.cursor.execute( query, ( user_id, ) )
+            #return self.cursor.fetchall()
         else:
             return None

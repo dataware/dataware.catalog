@@ -110,7 +110,6 @@ def user_register():
             if ( not _valid_name( user_name ) ):
                 errors[ 'user_name' ] = "Must be 3-64 legal characters"
             else: 
-                log.info("name is valid...")
                 match = db.user_fetch_by_name( user_name ) 
                 if ( not match is None ):
                     errors[ 'user_name' ] = "That name has already been taken"                    
@@ -159,11 +158,329 @@ def user_register():
         errors=errors ) 
     
 
+
+#//////////////////////////////////////////////////////////
+# CATALOG SPECIFIC WEB-API CALLS
+#//////////////////////////////////////////////////////////
+
+   
+#TODO: make sure that redirect uri's don't have a / on the end
+
+@route( "/resource_register", method = "POST" )
+@route( "/user/:user_name/resource_register", method = "GET" )
+def resource_register_endpoint():
+    
+    resource_name = request.forms.get( "resource_name" )   
+    resource_uri = request.forms.get( "redirect_uri" )
+    description = request.forms.get( "description" )
+    logo_uri = request.forms.get( "logo_uri" )
+    web_uri = request.forms.get( "web_uri" )
+    namespace = request.forms.get( "namespace" )
+    
+    result = am.resource_register( 
+        resource_name = resource_name,
+        resource_uri = resource_uri,
+        description = description,
+        logo_uri = logo_uri,
+        web_uri = web_uri,
+        namespace = namespace,
+    )
+    
+    log.debug( 
+        "Catalog_server: Resource Registration for client '%s': %s" 
+        % ( resource_name, result ) 
+    )
+        
+    return result    
+    
+    
+#//////////////////////////////////////////////////////////
+
+
+@route( "/resource_request", method = "GET" )
+@route( "/user/:user_name/resource_request", method = "GET" )
+def resource_request_endpoint():
+
+    #first check that required parameters have beeing supplied
+    try: 
+        resource_id = request.GET[ "resource_id" ]
+        resource_uri = request.GET[ "redirect_uri" ]
+        state = request.GET[ "state" ]
+    except:
+        return template( 'resource_request_error_template', 
+           error = "The resource has not supplied the right parameters." 
+        );
+
+    #Then check that the resource has registered
+    resource = db.resource_fetch_by_id( resource_id ) 
+    if ( not resource ):
+        return template( 'resource_request_error_template', 
+           error = "Resource isn't registered with us, so cannot install."
+        );
+    
+    #And finally check that it has supplied the correct credentials
+    if ( resource.resource_uri != resource_uri ):
+        return template( 'resource_request_error_template', 
+           error = "The resource has supplied incorrect credentials."
+        );
+
+    try:
+        user = _user_check_login()
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return user_error( e.msg )
+    except Exception, e:
+        return user_error( e ) 
+           
+    return template( 'resource_request_template', 
+        user=user,
+        state=state,
+        resource=resource
+    );
+
+
+#//////////////////////////////////////////////////////////
+ 
+
+@route( "/resource_authorize", method = "POST" )
+@route( "/user/:user_name/resource_authorize", method = "GET" )
+def resource_authorize_endpoint():
+    
+    try:
+        user = _user_check_login()
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return user_error( e.msg )
+    except Exception, e:
+        return user_error( e ) 
+    
+    resource_id = request.forms.get( "resource_id" )   
+    resource_uri = request.forms.get( "redirect_uri" )
+    state = request.forms.get( "state" )  
+    
+    result = am.resource_authorize( 
+        user,
+        resource_id = resource_id,
+        resource_uri = resource_uri,
+        state = state,
+    )
+   
+    log.debug( 
+        "Catalog_server: Resource Authorization Request from %s for %s completed" 
+        % ( user.user_id, resource_id ) 
+    )
+
+    return result
+
+
+#//////////////////////////////////////////////////////////
+      
+
+@route( "/resource_access", method = "GET" )
+@route( "/user/:user_name/resource_authorize", method = "GET" )
+def resource_access_endpoint():
+
+    grant_type = request.GET.get( "grant_type", None )
+    resource_uri = request.GET.get( "redirect_uri", None )
+    auth_code = request.GET.get( "code", None )    
+                
+    result = am.resource_access( 
+        grant_type = grant_type,
+        resource_uri = resource_uri,
+        auth_code = auth_code 
+    )
+
+    return result
+
+
+#//////////////////////////////////////////////////////////
+
+#//////////////////////////////////////////////////////////
+
+
+@route( "/client_register", method = "POST" )
+def client_register_endpoint():
+    
+    client_name = request.forms.get( "client_name" )   
+    namespace = request.forms.get( "namespace" )
+    client_uri = request.forms.get( "redirect_uri" )
+    description = request.forms.get( "description" )
+    logo_uri = request.forms.get( "logo_uri" )
+    web_uri = request.forms.get( "web_uri" )
+    
+        
+    result = am.client_register( 
+        client_name = client_name,
+        client_uri = client_uri,
+        description = description,
+        logo_uri = logo_uri,
+        web_uri = web_uri,
+        namespace = namespace,
+    )
+    
+    log.debug( 
+        "Catalog_server: Client Registration for client '%s': %s" 
+        % ( client_name, result ) 
+    )
+        
+    return result    
+    
+    
+#//////////////////////////////////////////////////////////
+
+    
+@route( "/user/:user_name/client_request", method = "POST" )
+def client_request_endpoint( user_name = None ):
+
+    client_id = request.forms.get( "client_id" )
+    state = request.forms.get( "state" )
+    client_uri = request.forms.get( "redirect_uri" )
+    json_scope = request.forms.get( "scope" )
+
+    log.info("client request endpoint %s %s %s" % (client_id, state, client_uri))
+    result = am.client_request( 
+        user_name = user_name,
+        client_id = client_id,
+        state = state,
+        client_uri = client_uri,
+        json_scope = json_scope 
+    )
+    
+    log.debug( 
+        "Catalog_server: Client Request from %s to %s: %s" 
+        % ( client_id, user_name, result ) 
+    )
+        
+    return result
+
+    
+#//////////////////////////////////////////////////////////
+ 
+
+@route( "/client_authorize", method = "POST" )
+def client_authorize_endpoint():
+
+    #by this point the user has authenticated and will have
+    #a cookie identifying themselves, and this is used to extract
+    #their id. This will be an openid (working as an access key),
+    #even though they have a publically exposed username. This
+    #api call involves interaction via the user's web agent so
+    #will redirect the user to the client if the access request
+    #acceptance is successful, or display an appropriate user_error page
+    #otherwise (e.g. if the resource provider rejects the request.
+
+    try:
+        user = _user_check_login()
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return user_error( e.msg )
+    except Exception, e:
+        return user_error( e ) 
+    
+    processor_id = request.forms.get( 'processor_id' )
+
+    result = am.client_authorize( 
+        user_id = user[ "user_id" ],
+        processor_id = processor_id,
+    )
+    
+    log.debug( 
+        "Catalog_server: Authorization Request from %s for request %s completed" 
+        % ( user[ "user_id"], processor_id ) 
+    )
+
+    return result
+
+
+#//////////////////////////////////////////////////////////   
+      
+
+@route( "/client_reject", method = "POST" )
+def client_reject_endpoint():
+    
+    try:
+        user = _user_check_login()
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return user_error( e.msg )
+    except Exception, e:
+        return user_error( e ) 
+    
+    processor_id = request.forms.get( 'processor_id' )
+    
+    result = am.client_reject( 
+        user_id = user[ "user_id" ],
+        processor_id = processor_id,
+    )
+
+    log.debug( 
+        "Catalog_server: Request rejection from %s for request %s" 
+        % ( user[ "user_id" ], processor_id ) 
+    )
+
+    return result
+
+    
+#//////////////////////////////////////////////////////////
+      
+
+@route( "/client_access", method = "GET" )
+def client_access_endpoint():
+
+    grant_type = request.GET.get( "grant_type", None )
+    client_uri = request.GET.get( "redirect_uri", None )
+    auth_code = request.GET.get( "code", None )    
+        
+    result = am.client_access( 
+        grant_type = grant_type,
+        client_uri = client_uri,
+        auth_code = auth_code 
+    )
+    
+    return result
+
+    
+#//////////////////////////////////////////////////////////   
+
+
+@route( "/client_revoke", method = "POST" )
+def client_revoke_enpdpoint():
+    
+    try:
+        user = _user_check_login()
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return user_error( e.msg )
+    except Exception, e:
+        return user_error( e ) 
+    
+    processor_id = request.forms.get( "processor_id" )
+
+    result = am.client_revoke( 
+        user_id = user[ "user_id" ],
+        processor_id = processor_id,
+    )
+
+    log.debug( 
+        "Catalog_server: Request %s has been successfully revoked by %s" \
+         % ( processor_id, user["user_id"] ) 
+    )
+    
+    return result
+                        
+
     
 @route( "/static/:filename" )
 def user_get_static_file( filename ):
     return static_file( filename, root=os.path.join(appPath, 'static'))
-    
+ 
+ 
+ 
 #//////////////////////////////////////////////////////////
 # OPENID SPECIFIC WEB-API CALLS
 #//////////////////////////////////////////////////////////
@@ -326,8 +643,40 @@ def user_openid_authenticate():
        
                 
 #///////////////////////////////////////////////
+    
+@route( "/audit" )
+def user_audit():
+    
+    PREVIEW_ROWS = 10
+    
+    try:
+        user = _user_check_login()
+        if ( not user ) : redirect( ROOT_PAGE ) 
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return user_error( e.msg )
+    except Exception, e:
+        return user_error( e )  
+    
+    processors = db.processors_fetch( user.user_id )
+    
+    for processor in processors:
+        try:
+            index = [ m.start() for m in re.finditer( r"\n", processor.query) ][ PREVIEW_ROWS ]
+            processor.preview = "%s\n..." % processor.query[ 0:index ]
+        except:
+            processor.preview = processor.query
+    
+    return template( 
+        "audit_page_template", 
+        REALM=REALM, 
+        user=user, 
+        processors=processors
+    );
+    
 
-
+#///////////////////////////////////////////////  
 def _valid_name( str ):
     
     return re.search( "^[A-Za-z0-9 ']{3,64}$", str )
@@ -347,6 +696,15 @@ WEB_PROXY=""
 ROOT_PAGE = "/"
 REALM = "http://127.0.0.1:8080"
 EXTENSION_COOKIE = "catalog_logged_in"
+
+
+try:    
+    am = AuthorizationModule.AuthorizationModule( db, WEB_PROXY )
+except Exception, e:
+    log.error( "Authorization Module failure: %s" % ( e, ) )
+    exit()
+        
+        
 appPath = dirname(__file__)
 app = bottle.default_app()
 

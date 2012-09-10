@@ -35,7 +35,7 @@
 		$.ajax({
 			type: 'POST',
 			url: "/resource_authorize",
-			data: 'resource_id={{resource["resource_id"]}}&state={{state}}&redirect_uri={{resource["resource_uri"]}}',
+			data: 'resource_id={{resource.resource_id}}&state={{state}}&redirect_uri={{resource.resource_uri}}',
 			success: function( data, status  ) {
 
 				data = eval( '(' + data + ')' );
@@ -56,7 +56,7 @@
 	function reject_resource( error ) {
 
 		window.location.href =  
-			'{{resource["resource_uri"]}}' +
+			'{{resource.resource_uri}}' +
 			'?state={{state}}' +
 			'&error=access_denied' +
 			'&error_description=' + error ;
@@ -100,15 +100,15 @@
 
 		<div style="padding-bottom:20px; border-bottom: 1px dotted black">
 			<div style="float:left; margin:0 8 0 1">
-				%if resource[ "logo_uri" ]:
-					%if resource[ "web_uri" ]:
-						<a href='{{resource[ "web_uri" ]}}' target='_blank'><img src='{{resource[ "logo_uri" ]}}' style='width:70px; height:70px'/></a>
+				%if resource.logo_uri:
+					%if resource.web_uri:
+						<a href='{{resource.web_uri}}' target='_blank'><img src='{{resource.logo_uri}}' style='width:70px; height:70px'/></a>
 					%else:
-						<img src='{{resource[ "logo_uri" ]}}' style='width:70px; height:70px'/>
+						<img src='{{resource.logo_uri}}' style='width:70px; height:70px'/>
 					%end
 				%else:
-					%if resource[ "web_uri" ]:
-						<a href='{{resource[ "web_uri" ]}}' target='_blank'><img src='./static/unknown.png' style='width:70px; height:70px'/></a>
+					%if resource.web_uri:
+						<a href='{{resource.web_uri}}' target='_blank'><img src='./static/unknown.png' style='width:70px; height:70px'/></a>
 					%else:
 						<img src='./static/unknown.png' style='width:70px; height:70px'/>
 					%end
@@ -116,17 +116,17 @@
 			</div>
 			<div style="margin-left:80px;">
 				<div>
-					%if resource[ "web_uri" ]:
-						<a style='color:9f5102' href='{{resource[ "web_uri" ]}}' target='_blank' style="font-size:14px; font-weight:bold; color:#864747;">{{resource[ "resource_name" ]}}</a>
+					%if resource.web_uri:
+						<a style='color:9f5102' href='{{resource.web_uri}}' target='_blank' style="font-size:14px; font-weight:bold; color:#864747;">{{resource.resource_name}}</a>
 					%else:
-						<b style='color:9f5102'>{{resource[ "resource_name" ]}}</b>
+						<b style='color:9f5102'>{{resource.resource_name}}</b>
 					%end
 				</div>
 				<div style="margin-top:10"> <b>registered:</b> 
 				%import time
-				{{time.strftime( "%d %b %Y", time.gmtime( resource[ "registered" ] ) )}}
+				{{time.strftime( "%d %b %Y", time.gmtime( resource.registered) )}}
 				</div>	
-				<div style="margin-top:10"> <b>description:</b> {{resource[ "description" ]}} </div>		
+				<div style="margin-top:10"> <b>description:</b> {{resource.description}} </div>		
 					
 			</div>
 		</div>
@@ -138,13 +138,13 @@
 			</div>
 			<div style="margin-left:80px;">
 				<div style="margin-top:10; color:#884b4b;"> 
-					<b>username:</b> {{user[ "user_name" ]}}
+					<b>username:</b> {{user.user_name}}
 				</div>
 				<div style="margin-top:10; color:#884b4b;"> 
-					<b>email:</b>  {{user[ "email" ]}}
+					<b>email:</b>  {{user.email}}
 				</div>
 				<div style="margin-top:10; color:#884b4b;"> 
-					<a href='login?resource_id={{resource["resource_id"]}}&redirect_uri={{resource["resource_uri"]}}&state={{state}}' style="font-size:14px;">not you?</a> 
+					<a href='login?resource_id={{resource.resource_id}}&redirect_uri={{resource.resource_uri}}&state={{state}}' style="font-size:14px;">not you?</a> 
 				</div>
 			</div>
 		</div>
@@ -155,7 +155,7 @@
 				<a href="javascript:authorize_resource()" style="font-size:14px;">install</a> |
 				<a href="javascript:reject_resource('The+user+denied+your+request')" style="font-size:14px;">reject</a>
 			%else:
-				<a href='login?resource_id={{resource["resource_id"]}}&redirect_uri={{resource["resource_uri"]}}&state={{state}}' style="font-size:14px;">login</a>
+				<a href='login?resource_id={{resource.resource_id}}&redirect_uri={{resource.resource_uri}}&state={{state}}' style="font-size:14px;">login</a>
 			%end
 		<div>
 

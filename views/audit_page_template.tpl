@@ -245,54 +245,54 @@
 	<div style="float:left; clear:both;">
 		<div>
 			%for processor in processors:
-			<div id='request_{{processor["processor_id"]}}' class="request_box">
-				<div class="item_number">{{processor["processor_id"]}}</div>
+			<div id='request_{{processor.key().id()}}' class="request_box">
+				<div class="item_number">{{processor.key().id()}}</div>
 				<div style="float:left;" >
 					<div style="width:954; height:5px; background-color:#aa6666;"> </div>
 					<div style="float:left; width:257px;" >
 						<div class="request_attribute">
 							<div class="item_name" >request from:</div>
-							<div class="item_value" >{{processor["client_name"]}}</div>
+							<div class="item_value" >{{processor.client.client_name}}</div>
 						</div>
 						<div class="request_attribute">
 							<div class="item_name" >against resource:</div>
-							<div class="item_value" >{{processor["resource_name"]}}</div>
+							<div class="item_value" >{{processor.resource.resource_name}}</div>
 						</div>
 						<div class="request_attribute">
 							<div class="item_name" >current status:</div>
-							<div class="item_value" >{{processor["request_status"]}}</div>
+							<div class="item_value" >{{processor.request_status}}</div>
 						</div>
 						<div class="request_attribute">
 							<div class="item_name" >expiry time:</div>
 							%import time
-							<div class="item_value" >{{time.strftime( "%d %b %Y %H:%M", time.gmtime( processor["expiry_time"]) )}}</div>
+							<div class="item_value" >{{time.strftime( "%d %b %Y %H:%M", time.gmtime( processor.expiry_time) )}}</div>
 						</div>
 						<div style="margin:3px">
-							%if processor[ "request_status" ] == "PENDING":
-								<a href='javascript:authorize_request({{processor[ "processor_id" ]}})'>authorize</a> |
-								<a href='javascript:reject_request({{processor[ "processor_id" ]}})'>reject</a>
-							%elif processor[ "request_status" ] == "ACCEPTED":
-								<a href='javascript:revoke_request({{processor[ "processor_id" ]}})'>revoke</a>
+							%if processor.request_status == "PENDING":
+								<a href='javascript:authorize_request({{processor.key().id() }})'>authorize</a> |
+								<a href='javascript:reject_request({{processor.key().id() }})'>reject</a>
+							%elif processor.request_status == "ACCEPTED":
+								<a href='javascript:revoke_request({{processor.key().id() }})'>revoke</a>
 							%end
 						</div>
 					</div>
 					<div style="font-size:12px; float:left; overflow:none; width:700px;">
 						<div class="item_name" style="width:690px; text-align:left; margin-bottom:10px;">
 							requested processor:
-					%if processor[ "query" ] != processor [ "preview" ] :
-								<a href='javascript:toggle({{processor[ "processor_id" ]}})'>toggle preview</a>
+					%if processor.query != processor.preview :
+								<a href='javascript:toggle({{processor.key().id()}})'>toggle preview</a>
 						</div>
-						<div id='request_{{processor[ "processor_id" ]}}_preview'>
-							<code class="brush: python; toolbar: false">{{processor[ "preview" ]}}</code>
+						<div id='request_{{processor.key().id()}}_preview'>
+							<code class="brush: python; toolbar: false">{{processor.preview }}</code>
 							<div class="item_name" style="float:right; margin-top:-15px;">. . . end of preview</div>
 						</div>
-						<div id='request_{{processor[ "processor_id" ]}}_full' style="display:none; margin-left:-6px;">
-							<code class="brush: python; toolbar: false">{{processor[ "query" ]}}</code>
+						<div id='request_{{processor.key().id()}}_full' style="display:none; margin-left:-6px;">
+							<code class="brush: python; toolbar: false">{{processor.query}}</code>
 						</div>
 					%else:
 						</div>
 						<div>
-							<code class="brush: python; toolbar: false">{{processor[ "query" ]}}</code>
+							<code class="brush: python; toolbar: false">{{processor.query}}</code>
 						</div>
 					%end
 					</div>

@@ -90,9 +90,9 @@ class AuthorizationModule( object ) :
     #///////////////////////////////////////////////
         
         
-    def __del__(self):
-        if self.db.connected: 
-            self.db.close(); 
+    #def __del__(self):
+        #if self.db.connected: 
+         #   self.db.close(); 
         
             
     #///////////////////////////////////////////////
@@ -239,6 +239,7 @@ class AuthorizationModule( object ) :
                 "catalog_denied", 
                 "your redirect URI must not end with /" )
         
+        log.info("checking if resource already exists.. %s" % resource_name)
         #check the resource does not clash with a previously registered one
         resource = self.db.resource_fetch_by_name( resource_name )
 
@@ -249,7 +250,8 @@ class AuthorizationModule( object ) :
 
         try:
             resource_id = self._generate_access_code()
-  
+            log.info("generated access code %s" % resource_id)
+            
             self.db.resource_insert( 
                 resource_id = resource_id,                                    
                 resource_name = resource_name,
@@ -260,7 +262,7 @@ class AuthorizationModule( object ) :
                 namespace = namespace,
             )
 
-            self.db.commit()
+            #self.db.commit()
 
             json_response = { 
                 'success': True,
@@ -297,12 +299,12 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "The resource has not been registered, and so cannot be installed." ) 
 
-            if not ( resource[ "resource_uri" ] == resource_uri ) :
+            if not ( resource.resource_uri == resource_uri ) :
                 return self._format_failure( 
                     "Incorrect resource credentials have been supplied." ) 
 
             #check that the user hasn't already been installed the resource
-            if( self.db.install_fetch_by_id( user[ "user_id" ], resource_id ) ):
+            if( self.db.install_fetch_by_id( user.user_id, resource_id ) ):
                 return self._format_failure( 
                     "You have already installed this resource." ) 
 
@@ -312,14 +314,14 @@ class AuthorizationModule( object ) :
             auth_code = self._generate_access_code()
             
             self.db.install_insert( 
-                user[ "user_id" ],
-                resource_id, 
+                user.user_id,
+                resource, 
                 state,
                 install_token,
                 auth_code                
             )
             
-            self.db.commit()
+            #self.db.commit()
             
             #the request has been accepted so return a success redirect url
             return self._format_auth_success(
@@ -355,30 +357,23 @@ class AuthorizationModule( object ) :
 
             #so far so good. Fetch the request that corresponds 
             #to the auth_code that has been supplied
-            try:
-                resource = self.db.install_fetch_by_auth_code( auth_code )
-                
-                if resource == None :
-                    return self._format_access_failure(
-                        "invalid_grant", 
-                        "Authorization Code supplied is unrecognized" 
-                    )  
-                
-                if not resource[ "install_token" ]  :
-                    return self._format_access_failure(
-                        "server_error", 
-                        "No access token seems to be available for that code" 
-                    )
             
-                return self._format_access_success( resource[ "install_token" ] ) 
+            resource = self.db.install_fetch_by_auth_code( auth_code )
+          
+            if resource == None :
+                return self._format_access_failure(
+                    "invalid_grant", 
+                    "Authorization Code supplied is unrecognized" 
+                )  
             
-            #determine if there has been a database error
-            except MySQLdb.Error:
+            if not resource.install_token  :
                 return self._format_access_failure(
                     "server_error", 
-                    "Database problems are currently being experienced" 
-                ) 
-
+                    "No access token seems to be available for that code" 
+                )
+        
+            return self._format_access_success( resource.install_token ) 
+        
         #determine if there has been a database error
         except Exception:
             return self._format_access_failure(
@@ -394,7 +389,7 @@ class AuthorizationModule( object ) :
     
     def client_register( self, client_name, client_uri,
         description, logo_uri, web_uri, namespace ):
-       
+        log.info("client name %s, client uri %s" % (client_name,client_uri))
         if ( client_name is None or client_uri is None ) :
             return self._format_submission_failure(
                 "catalog_denied",  
@@ -426,7 +421,7 @@ class AuthorizationModule( object ) :
                 namespace = namespace,
             )
             
-            self.db.commit()
+            #self.db.commit()
 
             json_response = { 
                 'success': True,
@@ -457,12 +452,14 @@ class AuthorizationModule( object ) :
                     "invalid_request", "The specified user name is not recognized" ) 
      
             #check that the client_id exists and is valid
+            
             client = self.db.client_fetch_by_id( client_id )
-            if ( not client ) or client[ "client_uri" ] != client_uri  :        
+             
+            if ( not client ) or client.client_uri != client_uri  :        
                 return self._format_submission_failure(
                     "unauthorized_client", "A valid client ID/redirect_uri pair has not been provided"
                 ) 
-
+           
             #check that the scope unpacks
             try:
                 scope = json.loads( 
@@ -473,16 +470,18 @@ class AuthorizationModule( object ) :
                 resource_name = scope[ "resource_name" ]
                 expiry_time = scope[ "expiry_time" ]
                 query = scope[ "query" ] 
-                
+              
             except Exception, e:
                 return self._format_submission_failure(
                     "invalid_scope", "incorrectly formatted JSON scope" ) 
             
+            log.info("ok am now here...resource name is %s" %(resource_name))
             #check that the resource is installed by the user
             resource = self.db.install_fetch_by_name( 
-                user[ "user_id" ],
+                user.user_id,
                 resource_name )
 
+            
             if not resource:
                 return self._format_submission_failure(
                     "invalid_request", "User does not have a resource installed by that name"
@@ -492,33 +491,22 @@ class AuthorizationModule( object ) :
             #Note that if the resource the client has requested access to
             #doesn't exist, the database will throw a foreign key error.
 
+            log.info("about to insert processor!")
+            log.info("resource id is %s" % resource.resource.resource_id)
+            
             self.db.processor_insert( 
-                user[ "user_id" ],                                    
-                client_id, 
+                user.user_id,                                    
+                client, 
                 state,
-                resource[ "resource_id" ],
+                resource.resource,
                 expiry_time, 
                 query,
                 Status.PENDING
             )
-
+            log.info("done!!")
             return self._format_submission_success() 
         
-        #determine if there has been an integrity error
-        except MySQLdb.IntegrityError, e:
-            
-            #primary key error - means the entry already exists
-            if ( e[ 0 ] == 1062 ):
-                return self._format_submission_failure(
-                    "invalid_scope","Supplied Processor code is a duplicate"
-                ) 
-                
-            #foreign key error (means that the specified resource is unknown)
-            elif ( e[ 0 ] == 1452): 
-                return self._format_submission_failure(
-                    "invalid_request", "Problem tying resource name to supplied user"
-                )
-        
+       
         #otherwise we have wider database problems
         except:   
             return self._format_submission_failure(
@@ -577,7 +565,7 @@ class AuthorizationModule( object ) :
                 #the processing request has been rejected by the resource_provider
                 #so we have to return a failure redirect url and mop up
                 result = self.db.processor_delete( processor_id )
-                self.db.commit()
+             #   self.db.commit()
 
                 return self._format_auth_failure(
                     processor[ "client_uri" ],
@@ -603,7 +591,7 @@ class AuthorizationModule( object ) :
                     "Server is currently experiencing database problems. \
                      Please try again later." )     
                  
-            self.db.commit()
+            #self.db.commit()
             
             #the processing request has been accepted so return a success redirect url
             return self._format_auth_success(
@@ -787,7 +775,7 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "Server is currently experiencing database problems. Please try again later." )     
 
-            self.db.commit()
+            #self.db.commit()
 
             #the processor has been revoked so build the redirect url that
             #will notify the client via the user's browser
@@ -860,7 +848,7 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "Server is currently experiencing database problems. Please try again later." )     
 
-            self.db.commit()
+            #self.db.commit()
 
             return self._format_revoke_success( 
                 processor[ "client_uri" ],
@@ -953,5 +941,4 @@ class AuthorizationModule( object ) :
         #replace plus signs with asterisks. Plus signs are reserved
         #characters in ajax transmissions, so just cause problems
         return token.replace( '+', '*' ) 
-
 
