@@ -534,15 +534,16 @@ class AuthorizationModule( object ) :
             #check that the processor_id exists and is pending
             processor = self.db.processor_fetch_by_id( processor_id )
 
+            log.info("got processor!!")
             if not ( processor ) :
                 return self._format_failure( 
                     "The processing request you are trying to authorize does not exist." ) 
             
-            if not ( processor[ "user_id" ] == user_id ) :
+            if not ( processor.user_id == user_id ) :
                 return self._format_failure( 
                     "Incorrect user authentication for that processing request." ) 
             
-            if ( not processor[ "request_status" ] == Status.PENDING ):
+            if ( not processor.request_status == Status.PENDING ):
                 return self._format_failure( 
                     "This request has already been authorized." )   
 
@@ -550,7 +551,7 @@ class AuthorizationModule( object ) :
             #get the details about the resource and the targeted user state
             install = self.db.install_fetch_by_id( 
                 user_id, 
-                processor[ "resource_id" ] 
+                processor.resource.resource_id 
             )
             
             if not ( install ) :
@@ -568,8 +569,8 @@ class AuthorizationModule( object ) :
              #   self.db.commit()
 
                 return self._format_auth_failure(
-                    processor[ "client_uri" ],
-                    processor[ "state" ],
+                    processor.client.client_uri,
+                    processor.state,
                     e.msg )
             except:
                 return self._format_failure(
@@ -595,10 +596,10 @@ class AuthorizationModule( object ) :
             
             #the processing request has been accepted so return a success redirect url
             return self._format_auth_success(
-                 processor[ "client_uri" ],  
-                 processor[ "state" ], 
+                 processor.client.client_uri,  
+                 processor.state, 
                  auth_code,
-                 processor[ "resource_uri" ],
+                 processor.resource.resource_uri
             )                            
 
         except:

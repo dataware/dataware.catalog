@@ -383,13 +383,13 @@ def client_authorize_endpoint():
     processor_id = request.forms.get( 'processor_id' )
 
     result = am.client_authorize( 
-        user_id = user[ "user_id" ],
+        user_id = user.user_id,
         processor_id = processor_id,
     )
     
     log.debug( 
         "Catalog_server: Authorization Request from %s for request %s completed" 
-        % ( user[ "user_id"], processor_id ) 
+        % ( user.user_id, processor_id ) 
     )
 
     return result

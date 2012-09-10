@@ -294,10 +294,11 @@ class CatalogDB():
         user_id, client, state, resource, 
         expiry_time, query_code, request_status ):
      
+        
         #create a SHA checksum for the file
         checksum = hashlib.sha1( query_code ).hexdigest()
         
-        processor = CatalogProcessor(user_id=user_id, client=client, state=state,resource=resource, expiry_time=float(expiry_time), query_code=query_code, request_status=request_status, created=time.time())
+        processor = CatalogProcessor(user_id=user_id, client=client, state=state,resource=resource, expiry_time=float(expiry_time), query=query_code, request_status=request_status, created=time.time())
         
         
         processor.put()
@@ -308,26 +309,9 @@ class CatalogDB():
     def processor_fetch_by_id( self, processor_id ) :
 
         if processor_id :
-            query = """
-                SELECT t.*, r.*, c.* FROM %s.%s t
-                JOIN %s.%s r ON r.resource_id = t.resource_id
-                JOIN %s.%s c ON c.client_id = t.client_id
-                WHERE processor_id = %s
-            """  % ( 
-                self.DB_NAME, self.TBL_CATALOG_PROCESSORS, 
-                self.DB_NAME, self.TBL_CATALOG_RESOURCES,
-                self.DB_NAME, self.TBL_CATALOG_CLIENTS, '%s', )
-           
-            self.cursor.execute( query, ( processor_id, ) )
-            row = self.cursor.fetchone()
-
-            if not row is None:
-                return row
-            else :
-                return None
-        else :
-            return None     
-        
+           return CatalogProcessor().get_by_id(int(processor_id))
+        else: 
+           return None
 
     #///////////////////////////////////////
 
