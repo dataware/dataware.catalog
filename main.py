@@ -692,7 +692,7 @@ def _valid_email( str ):
 #///////////////////////////////////////////////
       
 db = CatalogDB()
-WEB_PROXY=""
+WEB_PROXY=None#http://mainproxy.nottingham.ac.uk:8080"
 ROOT_PAGE = "/"
 REALM = "http://127.0.0.1:8080"
 EXTENSION_COOKIE = "catalog_logged_in"

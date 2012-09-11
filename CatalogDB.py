@@ -252,11 +252,15 @@ class CatalogDB():
     def install_fetch_by_id( self, user_id, resource_id ) :
         
         if not resource_id: return None
-        
         q = db.Query(CatalogInstall)
-        q.filter('user_id =', user_id).filter('resource_id =', resource_id)
+        q.filter('user_id =', user_id) #.filter('resource.resource_id =', resource_id)
+        installs = q.fetch(limit=1000)
+       
+        for install in installs:
+            if (install.resource.resource_id == resource_id):
+                return install
         
-        return q.get()
+        return None   
     
     
     #///////////////////////////////////////
@@ -294,12 +298,10 @@ class CatalogDB():
         user_id, client, state, resource, 
         expiry_time, query_code, request_status ):
      
-        
         #create a SHA checksum for the file
         checksum = hashlib.sha1( query_code ).hexdigest()
         
         processor = CatalogProcessor(user_id=user_id, client=client, state=state,resource=resource, expiry_time=float(expiry_time), query=query_code, request_status=request_status, created=time.time())
-        
         
         processor.put()
         
@@ -319,13 +321,10 @@ class CatalogDB():
     def processor_fetch_by_auth_code( self, auth_code ) :
 
         if auth_code :
-            query = """
-                SELECT * FROM %s.%s t where auth_code = %s 
-            """  % ( self.DB_NAME, self.TBL_CATALOG_PROCESSORS, '%s' ) 
+            q = db.Query(CatalogProcessor)
+            q.filter('auth_code =', auth_code)
+            row = q.get()
         
-            self.cursor.execute( query, ( auth_code, ) )
-            row = self.cursor.fetchone()
-
             if not row is None:
                 return row
             else :
@@ -338,30 +337,16 @@ class CatalogDB():
                
     def processor_update( self, processor_id, request_status, access_token, auth_code ) :
 
-        if processor_id and access_token :
-            query = """
-                UPDATE %s.%s 
-                SET request_status=%s, access_token = %s, auth_code = %s, ctime = %s
-                where processor_id = %s 
-            """  % ( self.DB_NAME, self.TBL_CATALOG_PROCESSORS, '%s', '%s', '%s', '%s', '%s' ) 
+        if processor_id and access_token : 
         
-            update = self.cursor.execute( 
-                query, 
-                ( request_status, access_token, auth_code,  time.time(), processor_id, ) 
-            )
-            
-            if update > 0 :
-                log.debug( 
-                    "%s: Access request %s registered with access_token %s" 
-                    % ( self.name, processor_id, access_token )  
-                )
+            processor = CatalogProcessor().get_by_id(int(processor_id))
+     
+            if not processor is None:
+                processor.request_status = request_status
+                processor.access_token = access_token
+                processor.auth_code = auth_code
+                processor.put()
                 return True
-            else:
-                log.warning( 
-                    "%s: trying to update an unknown request %s" 
-                    % (self.name, processor_id ) 
-                )
-                return False
         else :
             log.warning( 
                 "%s: attempting to update access request with insufficient parameters" 
@@ -375,13 +360,10 @@ class CatalogDB():
     def processor_delete( self, processor_id ) :
 
         if processor_id :
-            query = """
-                DELETE FROM %s.%s WHERE processor_id = %s 
-            """  % ( self.DB_NAME, self.TBL_CATALOG_PROCESSORS, '%s' ) 
-        
-            update = self.cursor.execute( query, ( processor_id, ) )
+            processor = CatalogProcessor().get_by_id(int(processor_id))
             
-            if update > 0 :
+            if not processor is None:
+                processor.delete()
                 log.debug( "%s: Access request %s deleted" % ( self.name, processor_id ) )
                 return True
             else:
@@ -403,19 +385,5 @@ class CatalogDB():
             q = db.Query(CatalogProcessor)
             q.filter('user_id =', user_id)
             return q.fetch(limit=100)
-            
-            #query = """
-            #    SELECT s.*, t.client_name, r.resource_name
-            #    FROM %s.%s s, %s.%s t, %s.%s r
-            #    WHERE s.user_id = %s 
-            #    AND s.client_id = t.client_id
-            #    AND s.resource_id = r.resource_id
-            #""" % ( 
-            #    self.DB_NAME, self.TBL_CATALOG_PROCESSORS, 
-            #    self.DB_NAME, self.TBL_CATALOG_CLIENTS,
-            #    self.DB_NAME, self.TBL_CATALOG_RESOURCES,  '%s' 
-            #)
-            #self.cursor.execute( query, ( user_id, ) )
-            #return self.cursor.fetchall()
         else:
             return None

@@ -4,6 +4,7 @@ Created on 12 April 2011
 """
 
 from new import * #@UnusedWildImport
+from google.appengine.api import urlfetch
 import json
 #import MySQLdb
 import logging
@@ -475,7 +476,7 @@ class AuthorizationModule( object ) :
                 return self._format_submission_failure(
                     "invalid_scope", "incorrectly formatted JSON scope" ) 
             
-            log.info("ok am now here...resource name is %s" %(resource_name))
+         
             #check that the resource is installed by the user
             resource = self.db.install_fetch_by_name( 
                 user.user_id,
@@ -490,10 +491,7 @@ class AuthorizationModule( object ) :
             #so far so good. Add the request to the user's database
             #Note that if the resource the client has requested access to
             #doesn't exist, the database will throw a foreign key error.
-
-            log.info("about to insert processor!")
-            log.info("resource id is %s" % resource.resource.resource_id)
-            
+  
             self.db.processor_insert( 
                 user.user_id,                                    
                 client, 
@@ -503,7 +501,7 @@ class AuthorizationModule( object ) :
                 query,
                 Status.PENDING
             )
-            log.info("done!!")
+           
             return self._format_submission_success() 
         
        
@@ -561,7 +559,6 @@ class AuthorizationModule( object ) :
             #contact the resource provider and fetch the access token  
             try:    
                 access_token = self._client_permit_request( processor, install )
-
             except PermitException, e:
                 #the processing request has been rejected by the resource_provider
                 #so we have to return a failure redirect url and mop up
@@ -579,6 +576,8 @@ class AuthorizationModule( object ) :
         
             #all is well so register the processing request as having been updated.
             auth_code = self._generate_access_code()
+            
+            log.info("authcode is %s" % auth_code)
             
             result = self.db.processor_update( 
                 processor_id, 
@@ -622,30 +621,36 @@ class AuthorizationModule( object ) :
         
         #build up the required data parameters for the communication
         data = urllib.urlencode( {
-                'install_token': install[ "install_token" ],
-                'client_id': processor[ "client_id" ],
-                'query': processor[ "query" ],
-                'expiry_time': processor[ "expiry_time" ],
+                'install_token': install.install_token,
+                'client_id': processor.client.client_id,
+                'query': processor.query,
+                'expiry_time': int(processor.expiry_time),
             }
         )
                         
-        url = "%s/permit_processor" % ( processor[ "resource_uri" ], )
-
+        url = "%s/permit_processor" % (processor.resource.resource_uri)
+       
+        log.info("connect to %s" % url)
         #if necessary setup a proxy
         if ( self._WEB_PROXY ):
             proxy = urllib2.ProxyHandler( self._WEB_PROXY )
             opener = urllib2.build_opener( proxy )
             urllib2.install_opener( opener )
-
+        
         #first communicate with the resource provider   
         try:
-            req = urllib2.Request( url, data )
-            response = urllib2.urlopen( req )
-            output = response.read()
-            
+            result = urlfetch.fetch(url=url,payload=data,method=urlfetch.POST,headers={'Content-type':'application/x-www-form-urlencoded'})
+          
+            #req = urllib2.Request( url, data )
+            #response = urllib2.urlopen( req ) #GAE doesn't like this as it calls gethostbyname
+            #output = response.read()
+            output = result.content
         except urllib2.URLError, e:
+            log.info("couldn't connect %s" % e)
             raise PermitException( "Failure - could not contact resource provider (%s)" % e )
-        
+        except Exception, e:
+            log.info("couldn't connect! %s" % e)
+
         #parse the json response from the provider
         try:
             output = json.loads( 
@@ -659,7 +664,9 @@ class AuthorizationModule( object ) :
         #determine whether the processor has been successfully
         #permitted by the resource provider
         try:
+            
             success = output[ "success" ]
+            
         except:
             #if we don't get a response then the agreed schema has
             #not been fulfilled by the resource provider. Bail.
@@ -687,7 +694,6 @@ class AuthorizationModule( object ) :
     
     #///////////////////////////////////////////////
     
-    
     def client_access( self, grant_type, client_uri, auth_code ):
          
         try:
@@ -706,30 +712,23 @@ class AuthorizationModule( object ) :
 
             #so far so good. Fetch the request that corresponds 
             #to the auth_code that has been supplied
-            try:
-                processor = self.db.processor_fetch_by_auth_code( auth_code )
-                
-                if processor == None :
-                    return self._format_access_failure(
-                        "invalid_grant", 
-                        "Authorization Code supplied is unrecognized" 
-                    )  
-                
-                if not processor[ "access_token" ]  :
-                    return self._format_access_failure(
-                        "server_error", 
-                        "No access token seems to be available for that code" 
-                    )
+         
+            processor = self.db.processor_fetch_by_auth_code( auth_code )
             
-                return self._format_access_success( processor[ "access_token" ] ) 
+            if processor == None :
+                return self._format_access_failure(
+                    "invalid_grant", 
+                    "Authorization Code supplied is unrecognized" 
+                )  
             
-            #determine if there has been a database error
-            except MySQLdb.Error:
+            if not processor.access_token :
                 return self._format_access_failure(
                     "server_error", 
-                    "Database problems are currently being experienced" 
-                ) 
-
+                    "No access token seems to be available for that code" 
+                )
+        
+            return self._format_access_success( processor.access_token ) 
+            
         #determine if there has been a database error
         except Exception:
             return self._format_access_failure(
@@ -762,11 +761,11 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "The processing request you are trying to reject does not exist." ) 
             
-            if not ( processor[ "user_id" ] == user_id ) :
+            if not ( processor.user_id == user_id ) :
                 return self._format_failure( 
                     "Incorrect user authentication for that request." ) 
             
-            if ( not processor[ "request_status" ] == Status.PENDING ):
+            if ( not processor.request_status == Status.PENDING ):
                 return self._format_failure( 
                     "This processing request has already been authorized." )   
 
@@ -781,8 +780,8 @@ class AuthorizationModule( object ) :
             #the processor has been revoked so build the redirect url that
             #will notify the client via the user's browser
             return self._format_revoke_success( 
-                processor[ "client_uri" ],
-                processor[ "state" ],
+                processor.client.client_uri,
+                processor.state,
                 "The user denied your processing request."
             )
 
