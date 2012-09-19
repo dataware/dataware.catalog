@@ -232,7 +232,12 @@ def resource_request_endpoint():
         return user_error( e.msg )
     except Exception, e:
         return user_error( e ) 
-           
+    
+    if (user is None):
+        return template( 'resource_request_error_template', 
+           error = "Please make sure you are logged into your catalog!"
+        );
+        
     return template( 'resource_request_template', 
         user=user,
         state=state,
@@ -426,8 +431,26 @@ def client_reject_endpoint():
 
     
 #//////////////////////////////////////////////////////////
-      
 
+@route( "/client_list_resources", method = "GET" )      
+def client_list_resources():
+    
+    client_id = request.GET.get( "client_id", None )
+    client_uri = request.GET.get( "client_uri", None )
+    log.info("got client_id: %s client_uri: %s" % (client_id, client_uri))
+    
+    if am.client_registered(client_id=client_id, client_uri=client_uri):
+        log.info("client is registered!!")
+        
+        result = json.dumps(db.resource_registered())
+        log.info(result)
+        return result
+    
+    log.info("hmmm client is not registered %s %s" % (client_id, client_uri))
+    
+    return "{'error': 'client not registered with this catalog!'}"
+
+#//////////////////////////////////////////////////////////
 @route( "/client_access", method = "GET" )
 def client_access_endpoint():
 
@@ -694,7 +717,8 @@ def _valid_email( str ):
 db = CatalogDB()
 WEB_PROXY=None#http://mainproxy.nottingham.ac.uk:8080"
 ROOT_PAGE = "/"
-REALM = "http://127.0.0.1:8080"
+#REALM = "http://127.0.0.1:8080"
+REALM = "http://datawarecatalog.appspot.com"
 EXTENSION_COOKIE = "catalog_logged_in"
 
 

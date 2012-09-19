@@ -736,7 +736,20 @@ class AuthorizationModule( object ) :
                 "An unknown error has occurred" 
             )        
 
- 
+    #///////////////////////////////////////////////
+    
+    def client_registered(self, client_id, client_uri):
+        
+        client = self.db.client_fetch_by_id( client_id )
+        
+        log.info("got client")
+        log.info(client)
+        
+        if ( not client ) or client.client_uri != client_uri  :        
+           return False
+    
+        return True            
+        
     #///////////////////////////////////////////////
      
     

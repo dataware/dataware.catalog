@@ -238,7 +238,27 @@ class CatalogDB():
         
         return q.get()
 
+    def resource_registered(self):
     
+        q = db.Query(CatalogInstall)
+         
+        results = q.fetch(limit=1000)
+    
+        listing = []
+         
+        for install in results:
+            log.info(install)
+            qc = db.Query(CatalogUser)
+            qc.filter('user_id =', install.user_id)
+            user = qc.get()
+            log.info(user)
+            
+            if not(user is None):
+                listing.append({'owner': user.user_name, 'resource_name':  install.resource.resource_name, 'resource_uri': install.resource.resource_uri})
+        
+        log.info(listing)
+        return listing
+         
     #////////////////////////////////////////////////////////////////////////////////////////////
     def install_insert( self, user_id, resource,
         state, install_token, auth_code ):
