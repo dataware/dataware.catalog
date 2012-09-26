@@ -238,7 +238,7 @@ class CatalogDB():
         
         return q.get()
 
-    def resource_registered(self):
+    def resource_registered(self, catalog_uri):
     
         q = db.Query(CatalogInstall)
          
@@ -254,7 +254,7 @@ class CatalogDB():
             log.info(user)
             
             if not(user is None):
-                listing.append({'owner': user.user_name, 'resource_name':  install.resource.resource_name, 'resource_uri': install.resource.resource_uri})
+                listing.append({'catalog_uri': catalog_uri, 'owner': user.user_name, 'resource_name':  install.resource.resource_name, 'resource_uri': install.resource.resource_uri})
         
         log.info(listing)
         return listing
@@ -407,3 +407,16 @@ class CatalogDB():
             return q.fetch(limit=100)
         else:
             return None
+            
+            
+    #///////////////////////////////////////
+     
+    def purgedata(self):
+        db.delete(CatalogProcessor.all())
+        db.delete(CatalogInstall.all())
+        db.delete(CatalogResource.all())
+        db.delete(CatalogClient.all())
+        db.delete(CatalogUser.all())
+        
+       
+        

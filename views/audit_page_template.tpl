@@ -174,135 +174,50 @@
 	HEADER SECTION
 ------------------------------------------------------------------>
 
-<div class="sub_header">
-	<div class="page-name">AUDIT</div>
-</div>
+<h4>AUDIT</h4>
 
-<style>
 
-.error_box {
-	background-color:#dd3333;
-	color:#ffffff;
-	padding:2px 5px 2px 5px;
-}
-
-.resource_error_box {
-	background-color:#dd33dd;
-	color:#ffffff;
-	padding:2px 5px 2px 5px;
-}
-
-.item_number {
-	float:left; 
-	background-color:#aa6666; 
-	font-size:15px; 
-	color:#ffffff; 
-	height:80px; 
-	width:40px; 
-	padding:5px;
-}
-
-.request_attribute {
-	overflow:auto;
-}
-
-.item_name {
-	margin:1px; 
-	background-color:#ffeeee;
-	font-size:11px; 
-	color:#aa6666; 
-	padding:3px;
-	text-align:right;
-	float:left;
-	font-family:arial;
-}
-
-.item_value {
-	margin:1px 4px;
-	font-size:11px; 
-	color:#777788; 
-	padding:3px;
-	text-align:right;
-	float:left;
-	font-family:arial;
-}
-
-.request_box {
-	margin:5px 0px 20px 5px; 
-	font-size:11px; 
-	overflow:auto;
-}
-
-</style>
 <!---------------------------------------------------------------- 
 	CONTENT SECTION
 ------------------------------------------------------------------>
-<div class="main">
+<div class="container">
 
-	<!---------------------------------------------------------------- 
-		THE DATA TABLE
-	------------------------------------------------------------------>
-	<div style="float:left; clear:both;">
-		<div>
-			%for processor in processors:
-			<div id='request_{{processor.key().id()}}' class="request_box">
-				<div class="item_number">{{processor.key().id()}}</div>
-				<div style="float:left;" >
-					<div style="width:954; height:5px; background-color:#aa6666;"> </div>
-					<div style="float:left; width:257px;" >
-						<div class="request_attribute">
-							<div class="item_name" >request from:</div>
-							<div class="item_value" >{{processor.client.client_name}}</div>
-						</div>
-						<div class="request_attribute">
-							<div class="item_name" >against resource:</div>
-							<div class="item_value" >{{processor.resource.resource_name}}</div>
-						</div>
-						<div class="request_attribute">
-							<div class="item_name" >current status:</div>
-							<div class="item_value" >{{processor.request_status}}</div>
-						</div>
-						<div class="request_attribute">
-							<div class="item_name" >expiry time:</div>
-							%import time
-							<div class="item_value" >{{time.strftime( "%d %b %Y %H:%M", time.gmtime( processor.expiry_time) )}}</div>
-						</div>
-						<div style="margin:3px">
-							%if processor.request_status == "PENDING":
-								<a href='javascript:authorize_request({{processor.key().id() }})'>authorize</a> |
-								<a href='javascript:reject_request({{processor.key().id() }})'>reject</a>
-							%elif processor.request_status == "ACCEPTED":
-								<a href='javascript:revoke_request({{processor.key().id() }})'>revoke</a>
-							%end
-						</div>
-					</div>
-					<div style="font-size:12px; float:left; overflow:none; width:700px;">
-						<div class="item_name" style="width:690px; text-align:left; margin-bottom:10px;">
-							requested processor:
-					%if processor.query != processor.preview :
-								<a href='javascript:toggle({{processor.key().id()}})'>toggle preview</a>
-						</div>
-						<div id='request_{{processor.key().id()}}_preview'>
-							<code class="brush: python; toolbar: false">{{processor.preview }}</code>
-							<div class="item_name" style="float:right; margin-top:-15px;">. . . end of preview</div>
-						</div>
-						<div id='request_{{processor.key().id()}}_full' style="display:none; margin-left:-6px;">
-							<code class="brush: python; toolbar: false">{{processor.query}}</code>
-						</div>
-					%else:
-						</div>
-						<div>
-							<code class="brush: python; toolbar: false">{{processor.query}}</code>
-						</div>
+    <table class="table table-condensed table-striped table-bordered">
+     
+       <thead>
+            <tr>
+                <th>id</th>
+                <th>initiator</th>
+                <th>resource</th>
+                <th>status</th>
+                <th>expiry</th>
+                <th>code</th>
+                <th>action</th>
+            </tr>   
+        </thead>  
+        
+        <tbody> 
+            %for processor in processors:
+            <tr>
+                <td>{{processor.key().id()}}</td>
+                <td>{{processor.client.client_name}}</td>
+                <td>{{processor.resource.resource_name}}</td> 
+                <td>{{processor.request_status}}</td> 
+                %import time
+                <td>{{time.strftime( "%d %b %Y %H:%M", time.gmtime( processor.expiry_time) )}}</td> 
+                <td><code class="brush: python; toolbar: false">{{processor.query}}</code></td>
+                <td>
+                    %if processor.request_status == "PENDING":
+						<a href='javascript:authorize_request({{processor.key().id() }})'>authorize</a> |
+						<a href='javascript:reject_request({{processor.key().id() }})'>reject</a>
+					%elif processor.request_status == "ACCEPTED":
+						<a href='javascript:revoke_request({{processor.key().id() }})'>revoke</a>
 					%end
-					</div>
-				</div>
-			</div>
-			%end
-		</div>	
-	</div>	
-</div>
-
+                </td> 
+            </tr> 
+            %end
+        </tbody>
+    </table>  
 <!-- Finally, to actually run the highlighter, you need to include this JS on your page -->
 <script type="text/javascript">
 	SyntaxHighlighter.config.tagName = "code";

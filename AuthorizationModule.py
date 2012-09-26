@@ -827,15 +827,15 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "The processing request that you are trying to revoke does not exist." ) 
             
-            if not ( processor[ "user_id" ] == user_id ) :        
+            if not ( processor.user_id == user_id ) :        
                 return self._format_failure( 
                     "Incorrect user authentication for that processing request." ) 
                          
-            if ( not processor[ "request_status" ] == Status.ACCEPTED ):
+            if ( not processor.request_status == Status.ACCEPTED ):
                 return self._format_failure( 
                     "This processing request has not been authorized, and so cannot be revoked." )   
 
-            install = self.db.install_fetch_by_id( user_id, processor[ "resource_id" ] )
+            install = self.db.install_fetch_by_id( user_id, processor.resource.resource_id )
             
             if ( not install ):
                 return self._format_failure( 
@@ -844,7 +844,7 @@ class AuthorizationModule( object ) :
             # contact the resource provider and tell them we have cancelled the
             # request so they should delete it, and its access_token from their records
             try:     
-                self._client_revoke_request( processor, install[ "install_token" ] )
+                self._client_revoke_request( processor, install.install_token)
                 
             except RevokeException, e:
                 return self._format_failure(
@@ -864,8 +864,8 @@ class AuthorizationModule( object ) :
             #self.db.commit()
 
             return self._format_revoke_success( 
-                processor[ "client_uri" ],
-                processor[ "state" ],
+                processor.client.client_uri,
+                processor.state,
                 "The user revoked your processor request."
             )
 
@@ -888,11 +888,11 @@ class AuthorizationModule( object ) :
         #build up the required data parameters for the communication
         data = urllib.urlencode( {
                 'install_token': install_token,
-                'access_token': processor[ "access_token" ],
+                'access_token': processor.access_token
             }
         )
 
-        url = "%s/revoke_processor" % ( processor[ "resource_uri" ], )
+        url = "%s/revoke_processor" % ( processor.resource_uri )
 
         #if necessary setup a proxy
         if ( self._WEB_PROXY ):

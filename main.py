@@ -5,6 +5,8 @@ import OpenIDManager
 from CatalogDB import *   
 import logging
 import AuthorizationModule
+import wsgiref.util
+
 from framework import bottle
 from framework.bottle import *
 from google.appengine.ext.webapp.util import run_wsgi_app
@@ -418,7 +420,7 @@ def client_reject_endpoint():
     processor_id = request.forms.get( 'processor_id' )
     
     result = am.client_reject( 
-        user_id = user[ "user_id" ],
+        user_id =  user.user_id,
         processor_id = processor_id,
     )
 
@@ -442,7 +444,7 @@ def client_list_resources():
     if am.client_registered(client_id=client_id, client_uri=client_uri):
         log.info("client is registered!!")
         
-        result = json.dumps(db.resource_registered())
+        result = json.dumps(db.resource_registered(wsgiref.util.application_uri(request.environ)[:-1]))
         log.info(result)
         return result
     
@@ -485,13 +487,13 @@ def client_revoke_enpdpoint():
     processor_id = request.forms.get( "processor_id" )
 
     result = am.client_revoke( 
-        user_id = user[ "user_id" ],
+        user_id =  user.user_id,
         processor_id = processor_id,
     )
 
     log.debug( 
         "Catalog_server: Request %s has been successfully revoked by %s" \
-         % ( processor_id, user["user_id"] ) 
+         % ( processor_id,  user.user_id) 
     )
     
     return result
@@ -501,7 +503,13 @@ def client_revoke_enpdpoint():
 @route( "/static/:filename" )
 def user_get_static_file( filename ):
     return static_file( filename, root=os.path.join(appPath, 'static'))
- 
+
+@route( "/static/:path#.+#" )
+
+def user_get_static_file( path ):
+   
+    return static_file( path, root='static/')
+
  
  
 #//////////////////////////////////////////////////////////
@@ -697,8 +705,12 @@ def user_audit():
         user=user, 
         processors=processors
     );
-    
 
+@route( "/purge" )
+def purge():    
+    db.purgedata()
+    redirect( "/" )
+    
 #///////////////////////////////////////////////  
 def _valid_name( str ):
     
