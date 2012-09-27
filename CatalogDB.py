@@ -2,6 +2,7 @@ import ConfigParser
 import hashlib
 import logging
 import time
+import urlparse
 from google.appengine.ext import db
 
 log = logging.getLogger( "console_log" )
@@ -20,6 +21,7 @@ class CatalogClient(db.Model):
     client_id = db.StringProperty()
     client_name = db.StringProperty()
     client_uri = db.StringProperty()
+    client_domain = db.StringProperty()
     description = db.StringProperty(multiline=True)
     logo_uri = db.StringProperty()
     web_uri = db.StringProperty()
@@ -178,8 +180,17 @@ class CatalogDB():
     def client_insert( self, client_id, client_name,
         client_uri, description, logo_uri, web_uri, namespace):
        
+        log.info("parsing %s" % client_uri)
+        
+        parsedurl = urlparse.urlparse(client_uri)
+        log.info(parsedurl)
+        
+        client_domain = "%s://%s" % (parsedurl.scheme, parsedurl.netloc)
+        
+        log.info("client domain is %s" % client_domain)
+        
         client = CatalogClient(client_id=client_id, client_name=client_name,
-        client_uri=client_uri, description=description, logo_uri=logo_uri, web_uri=web_uri, namespace=namespace, registered=time.time())
+        client_uri=client_uri, client_domain=client_domain, description=description, logo_uri=logo_uri, web_uri=web_uri, namespace=namespace, registered=time.time())
         
         client.put()
                 

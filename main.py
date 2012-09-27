@@ -498,7 +498,19 @@ def client_revoke_enpdpoint():
     
     return result
                         
-
+@route("/test_query", method="POST")
+def test_query():
+    
+    resource_uri = request.forms.get( 'resource_uri' )
+    query = request.forms.get('query')
+    parameters = request.forms.get('parameters')
+    
+    result = am.test_query( 
+        resource_uri =  resource_uri,
+        query = query,
+        parameters = parameters
+    )
+     
     
 @route( "/static/:filename" )
 def user_get_static_file( filename ):
@@ -595,7 +607,11 @@ def _user_extract_id():
             raise LoginException( "You are logged in but have no user_id. Resetting." )
     else:
         return None
-        
+
+
+     
+     
+     
 #///////////////////////////////////////////////
  
          

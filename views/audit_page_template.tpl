@@ -130,6 +130,7 @@
 			}
 		});		
 	}
+	
 
 	////////////////////////////////////////////////////
 
@@ -153,6 +154,26 @@
 			}
 		});
 	}
+	
+	
+	function test_query( resource_uri, query, parameters ) {
+		$.ajax({
+			type: 'POST',
+			url: "/test_query",
+			dataType: "json",
+			data: {
+			    resource_uri: resource_uri,
+			    query: query,
+			    parameters: parameters
+			},
+			success: function( data, status  ) {
+				console.log(data)
+			},
+			error: function( data, status ) {
+				error_box( "Unable to contact resource at this time. Please try again later." );
+			}
+		});
+	}
 
 	////////////////////////////////////////////////////
 
@@ -168,20 +189,28 @@
 			preview.css( "display", "block" );
 		}
 	}
+	
+	
+	function test_uri(resource_uri, query, parameters){
+	    window.location = resource_uri + "/test_query?query=" + encodeURIComponent(query) + "&parameters=" + encodeURIComponent(parameters); 
+	}
 </script>
 
 <!---------------------------------------------------------------- 
 	HEADER SECTION
 ------------------------------------------------------------------>
 
-<h4>AUDIT</h4>
+
 
 
 <!---------------------------------------------------------------- 
 	CONTENT SECTION
 ------------------------------------------------------------------>
 <div class="container">
-
+    
+    
+    <h4>AUDIT</h4>
+    
     <table class="table table-condensed table-striped table-bordered">
      
        <thead>
@@ -200,7 +229,7 @@
             %for processor in processors:
             <tr>
                 <td>{{processor.key().id()}}</td>
-                <td>{{processor.client.client_name}}</td>
+                <td><a href="{{processor.client.client_domain}}">{{processor.client.client_name}}</a></td>
                 <td>{{processor.resource.resource_name}}</td> 
                 <td>{{processor.request_status}}</td> 
                 %import time
@@ -208,8 +237,13 @@
                 <td><code class="brush: python; toolbar: false">{{processor.query}}</code></td>
                 <td>
                     %if processor.request_status == "PENDING":
-						<a href='javascript:authorize_request({{processor.key().id() }})'>authorize</a> |
-						<a href='javascript:reject_request({{processor.key().id() }})'>reject</a>
+                        <div class="btn-group">
+                            <a class="btn btn-primary" href='javascript:authorize_request({{processor.key().id() }})'>authorize</a> 
+                            <a class="btn btn-primary" href='javascript:reject_request({{processor.key().id() }})'>reject</a>
+						    <a class="btn btn-primary" href='javascript:test_uri("{{processor.resource.resource_uri}}","{{processor.query}}","{}")'>test</a>
+                        </div>
+						
+						
 					%elif processor.request_status == "ACCEPTED":
 						<a href='javascript:revoke_request({{processor.key().id() }})'>revoke</a>
 					%end

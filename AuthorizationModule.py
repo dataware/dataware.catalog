@@ -411,7 +411,8 @@ class AuthorizationModule( object ) :
         
         try:
             client_id = self._generate_access_code()
-        
+            log.info("got client id %s" % client_id)
+            
             self.db.client_insert( 
                 client_id = client_id,                                    
                 client_name = client_name,
@@ -422,6 +423,7 @@ class AuthorizationModule( object ) :
                 namespace = namespace,
             )
             
+            log.info("inserted client")
             #self.db.commit()
 
             json_response = { 
@@ -939,10 +941,50 @@ class AuthorizationModule( object ) :
 
             raise RevokeException( cause )
         
-    
-    #///////////////////////////////////////////////
+    def test_query( self, resource_uri, query, parameters):
+          #build up the required data parameters for the communication
+        data = urllib.urlencode( {
+                'query': query,
+                'parameters': parameters
+            }
+        )
+
+        url = "%s/test_query" % ( resource_uri )
+
+        #if necessary setup a proxy
+        if ( self._WEB_PROXY ):
+            proxy = urllib2.ProxyHandler( self._WEB_PROXY )
+            opener = urllib2.build_opener(proxy)
+            urllib2.install_opener(opener)
+         
+        #first communicate with the resource provider   
+        try:
+           
+            req = urllib2.Request( url, data )
+            response = urllib2.urlopen( req )
+            output = response.read()
+            log.info(output)
+            
+        except urllib2.URLError:
+            raise RevokeException( "Resource provider uncontactable. Please Try again later." )
+
+        #parse the json response from the provider
+        try:
+            output = json.loads( 
+                output.replace( '\r\n','\n' ), 
+                strict=False 
+            )
+            log.info("parsed %s" % output)
+            
+        except:
+            raise RevokeException( "Invalid json returned by the resource provider" )
         
-             
+        log.info("returning %s" % output)
+        return output
+        
+
+    #///////////////////////////////////////////////     
+        
     def _generate_access_code( self ):
         
         token = base64.b64encode(  
