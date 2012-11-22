@@ -534,7 +534,7 @@ class AuthorizationModule( object ) :
             #check that the processor_id exists and is pending
             processor = self.db.processor_fetch_by_id( processor_id )
 
-            log.info("got processor!!")
+           
             if not ( processor ) :
                 return self._format_failure( 
                     "The processing request you are trying to authorize does not exist." ) 
@@ -758,20 +758,26 @@ class AuthorizationModule( object ) :
     def client_reject( self, user_id, processor_id ):
 
         try:   
+            
+            log.info("rejecting!")
             #check that the user_id exists and is valid
             user = self.db.user_fetch_by_id( user_id )
 
             if not ( user ) :
                 return self._format_failure( 
                     "A valid user ID and has not been provided." )
-            
+            log.info("got user!")
             if not ( processor_id ) :        
                 return self._format_failure( 
                     "A valid processor ID and has not been provided." )
- 
+            
+            log.info("got processor id")
+            
             #check that the processor_id exists and is pending
             processor = self.db.processor_fetch_by_id( processor_id )
 
+            log.info("got processor")
+            
             if not ( processor ) :
                 return self._format_failure( 
                     "The processing request you are trying to reject does not exist." ) 
@@ -783,7 +789,8 @@ class AuthorizationModule( object ) :
             if ( not processor.request_status == Status.PENDING ):
                 return self._format_failure( 
                     "This processing request has already been authorized." )   
-
+            
+            log.info("deleting processor!")
             result = self.db.processor_delete( processor_id )
 
             if ( not result ):
@@ -794,6 +801,7 @@ class AuthorizationModule( object ) :
 
             #the processor has been revoked so build the redirect url that
             #will notify the client via the user's browser
+            log.info("sending something to client to let them know this has been rejected %s" % processor.client.client_uri)
             return self._format_revoke_success( 
                 processor.client.client_uri,
                 processor.state,
@@ -886,7 +894,8 @@ class AuthorizationModule( object ) :
             Once the user has revoked an authorization request, the catalog
             must tell the resource provider to deregister that query 
         """
-        
+        log.info("about to call the resource provider %s" % install_token)
+        log.info(processor)
         #build up the required data parameters for the communication
         data = urllib.urlencode( {
                 'install_token': install_token,
@@ -894,7 +903,12 @@ class AuthorizationModule( object ) :
             }
         )
 
-        url = "%s/revoke_processor" % ( processor.resource_uri )
+        log.info("am here %s" % data)
+        
+        
+        url = "%s/revoke_processor" % ( processor.resource.resource_uri )
+
+        log.info("calling url %s" % url)        
 
         #if necessary setup a proxy
         if ( self._WEB_PROXY ):
@@ -909,6 +923,7 @@ class AuthorizationModule( object ) :
             output = response.read()
             
         except urllib2.URLError:
+            log.error("couldn't contact resource provider!")
             raise RevokeException( "Resource provider uncontactable. Please Try again later." )
 
         #parse the json response from the provider
@@ -919,6 +934,7 @@ class AuthorizationModule( object ) :
             )
 
         except:
+            log.error("invalid json!!")
             raise RevokeException( "Invalid json returned by the resource provider" )
 
         #determine whether the processor has been successfully

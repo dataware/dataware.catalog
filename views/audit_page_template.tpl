@@ -194,6 +194,30 @@
 	function test_uri(resource_uri, query, parameters){
 	    window.location = resource_uri + "/test_query?query=" + encodeURIComponent(query) + "&parameters=" + encodeURIComponent(parameters); 
 	}
+	
+	function showtoken(token){
+	    console.log(token);
+	    console.log("subscribing");
+	    channel = new goog.appengine.Channel(token);
+	    socket = channel.open();
+	    socket.onopen = function(){console.log("opened")};
+	    socket.onmessage = function(data){console.log(data);alert(data)}
+	}
+	
+	function sendmessage(){
+	    $.ajax({
+			type: 'POST',
+			url: "/sendmessage",
+			data: "",
+			success: function( data, status  ) {
+				
+			},
+			error: function( data, status ) {
+				error_box( "Unable to contact server at this time. Please try again later." );
+			}
+		});
+	}
+	
 </script>
 
 <!---------------------------------------------------------------- 
@@ -211,8 +235,11 @@
     
     <h4>AUDIT</h4>
     
+    <a class="btn btn-primary" href="javascript:showtoken('{{user.channel_token}}')">see token</a> 
+    <a class="btn btn-primary" href="javascript:sendmessage()">send message</a> 
+    
     <table class="table table-condensed table-striped table-bordered">
-     
+    
        <thead>
             <tr>
                 <th>id</th>
@@ -245,7 +272,7 @@
 						
 						
 					%elif processor.request_status == "ACCEPTED":
-						<a href='javascript:revoke_request({{processor.key().id() }})'>revoke</a>
+						<a href='javascript:revoke_request({{processor.key().id()}})'>revoke</a>
 					%end
                 </td> 
             </tr> 
@@ -258,6 +285,18 @@
     SyntaxHighlighter.all()
 </script>
 
+<script type="text/javascript">
+    
+    function CatalogModel(){
+        console.log('creating new catalog model...');
+        this.processors = ko.observableArray({{!processorjson}});
+        console.log(this.processors());
+    }
+
+    var cm = new CatalogModel();
+    ko.applyBindings(cm);    
+
+</script>
 <!-- FOOTER ------------------------------------------------------------------>
 %include footer
 

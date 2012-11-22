@@ -7,16 +7,20 @@ from google.appengine.ext import db
 
 log = logging.getLogger( "console_log" )
 
-
-class CatalogUser(db.Model):
+class DictModel(db.Model):
+    def to_dict(self):  
+        return dict([(p,unicode(getattr(self, p)) if (not isinstance(getattr(self, p),db.Model)) else getattr(self, p).to_dict()) for p in self.properties()])
+        
+class CatalogUser(DictModel):
     """Models a user of the dataware Catalog."""
     user_id = db.StringProperty()
     content = db.StringProperty()            
     user_name = db.StringProperty()
-    email   =   db.StringProperty()        
+    email   =   db.StringProperty() 
+    channel_token = db.StringProperty()       
     registered = db.FloatProperty()
     
-class CatalogClient(db.Model):
+class CatalogClient(DictModel):
     """Models a third party client registered with the dataware Catalog."""
     client_id = db.StringProperty()
     client_name = db.StringProperty()
@@ -28,7 +32,7 @@ class CatalogClient(db.Model):
     namespace = db.StringProperty()
     registered = db.FloatProperty()
 
-class CatalogResource(db.Model):
+class CatalogResource(DictModel):
     """Models the resources managed by this catalog."""
     resource_id = db.StringProperty()
     resource_name = db.StringProperty()
@@ -39,7 +43,7 @@ class CatalogResource(db.Model):
     namespace  = db.StringProperty()
     registered = db.FloatProperty()
 
-class CatalogInstall(db.Model):
+class CatalogInstall(DictModel):
     user_id = db.StringProperty()
     #resource_id = db.StringProperty() 
     resource = db.ReferenceProperty(CatalogResource)
@@ -49,7 +53,7 @@ class CatalogInstall(db.Model):
     created = db.FloatProperty()
     ctime = db.FloatProperty()
 
-class CatalogProcessor(db.Model):
+class CatalogProcessor(DictModel):
     user_id = db.StringProperty()
     client = db.ReferenceProperty(CatalogClient)
     state = db.StringProperty()
@@ -63,6 +67,7 @@ class CatalogProcessor(db.Model):
     created = db.FloatProperty()
     ctime = db.FloatProperty()   
    
+    
 class CatalogDB():
         
     def __init__(self):
@@ -96,7 +101,7 @@ class CatalogDB():
     #///////////////////////////////////////
     
                     
-    def user_register( self, user_id, user_name, email ):
+    def user_register( self, user_id, user_name, email, token ):
             
         if ( user_id and user_name and email ):
             
@@ -110,6 +115,7 @@ class CatalogDB():
             user = q.get()
             user.user_name = user_name
             user.email = email
+            user.channel_token = token
             user.registered = time.time()
             user.put()
             return True;
@@ -392,6 +398,7 @@ class CatalogDB():
 
         if processor_id :
             processor = CatalogProcessor().get_by_id(int(processor_id))
+            log.info("in database - got processor to delete!")
             
             if not processor is None:
                 processor.delete()

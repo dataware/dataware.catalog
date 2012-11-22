@@ -10,6 +10,8 @@ import wsgiref.util
 from framework import bottle
 from framework.bottle import *
 from google.appengine.ext.webapp.util import run_wsgi_app
+from google.appengine.api import channel
+
 from os.path import join, dirname
 
 log = logging.getLogger( "console_log" )
@@ -18,7 +20,7 @@ log = logging.getLogger( "console_log" )
 @route( "/home", method = "GET" )
 def user_home( ):
     try:
-        user = _user_check_login()
+        user = _user_check_login()  
     except RegisterException, e:
         redirect( "/register" )
     except LoginException, e:
@@ -26,8 +28,8 @@ def user_home( ):
     except Exception, e:
         return user_error( e )
    
-    
-    return template( "home_page_template", REALM=REALM, user=user);
+    redirect("/audit")
+    #return template( "home_page_template", REALM=REALM, user=user);
 
 #///////////////////////////////////////////////
 
@@ -66,6 +68,7 @@ def user_openid_login():
         log.error( e )
         return user_error( e )
     
+   
     #Here we do a javascript redirect. A 302 redirect won't work
     #if the calling page is within a frame (due to the requirements
     #of some openid providers who forbid frame embedding), and the 
@@ -135,7 +138,12 @@ def user_register():
         #if everything is okay so far, add the data to the database    
         if ( len( errors ) == 0 ):
             try:
-                match = db.user_register( user_id, user_name, email) 
+                log.info("creating channel %s" % user_id)
+               
+                token = channel.create_channel(email)
+                log.info("channel token %s" % token)
+                
+                match = db.user_register( user_id, user_name, email, token) 
             except Exception, e:
                 return user_error( e )
 
@@ -167,6 +175,24 @@ def user_register():
 
    
 #TODO: make sure that redirect uri's don't have a / on the end
+
+
+@route("/sendmessage", method="POST")
+def sendmessage():
+    try:
+        user = _user_check_login()
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return user_error( e.msg )
+    except Exception, e:
+        return user_error( e ) 
+    
+    log.info("sending a message!")
+    
+    token = channel.send_message(user.email, "hello!!!")
+    
+    log.info("done sending a message!")
 
 @route( "/resource_register", method = "POST" )
 @route( "/user/:user_name/resource_register", method = "GET" )
@@ -426,7 +452,7 @@ def client_reject_endpoint():
 
     log.debug( 
         "Catalog_server: Request rejection from %s for request %s" 
-        % ( user[ "user_id" ], processor_id ) 
+        % ( user.user_id, processor_id ) 
     )
 
     return result
@@ -719,7 +745,8 @@ def user_audit():
         "audit_page_template", 
         REALM=REALM, 
         user=user, 
-        processors=processors
+        processors=processors,
+        processorjson=(json.dumps([p.to_dict() for p in processors]))
     );
 
 @route( "/purge" )
@@ -748,7 +775,6 @@ ROOT_PAGE = "/"
 #REALM = "http://127.0.0.1:8080"
 REALM = "http://datawarecatalog.appspot.com"
 EXTENSION_COOKIE = "catalog_logged_in"
-
 
 try:    
     am = AuthorizationModule.AuthorizationModule( db, WEB_PROXY )
