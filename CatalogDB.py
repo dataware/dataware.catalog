@@ -43,9 +43,12 @@ class CatalogResource(DictModel):
     namespace  = db.StringProperty()
     registered = db.FloatProperty()
 
+#attributes of a reference property are not indexable, so this table is denormalized 
+#to help query on resource_name and resource_id
 class CatalogInstall(DictModel):
     user_id = db.StringProperty()
-    #resource_id = db.StringProperty() 
+    resource_name = db.StringProperty() 
+    resource_id = db.StringProperty() 
     resource = db.ReferenceProperty(CatalogResource)
     state = db.StringProperty()
     install_token = db.StringProperty()
@@ -280,8 +283,7 @@ class CatalogDB():
     def install_insert( self, user_id, resource,
         state, install_token, auth_code ):
         
-        install = CatalogInstall( user_id=user_id, resource=resource,
-        state=state, install_token=install_token, auth_code=auth_code, created=time.time(), ctime=time.time() )
+        install = CatalogInstall( user_id=user_id, resource=resource, resource_name=resource.resource_name, resource_id=resource.resource_id, state=state, install_token=install_token, auth_code=auth_code, created=time.time(), ctime=time.time() )
         
         install.put()
         
@@ -290,14 +292,16 @@ class CatalogDB():
         
         if not resource_id: return None
         q = db.Query(CatalogInstall)
-        q.filter('user_id =', user_id) #.filter('resource.resource_id =', resource_id)
-        installs = q.fetch(limit=1000)
-       
-        for install in installs:
-            if (install.resource.resource_id == resource_id):
-                return install
+        q.filter('user_id =', user_id).filter('resource_id =', resource_id)
+        return q.get()
         
-        return None   
+        #fetch(limit=1000)
+       
+        #for install in installs:
+        #    if (install.resource.resource_id == resource_id):
+        #        return install
+        
+        #return None   
     
     
     #///////////////////////////////////////
@@ -305,11 +309,13 @@ class CatalogDB():
     def install_fetch_by_name( self, user_id, resource_name ) :
 
         if not resource_name: return None
+        log.info("seacrhing on user_id %s resourcename %s" % (user_id, resource_name))
        
-        ciq = db.Query(CatalogInstall)
-        ciq.filter('user_id =', user_id)
-        row = ciq.get()
-    
+        q = db.Query(CatalogInstall)
+        q.filter('user_id =', user_id)
+        q.filter('resource_name =', resource_name)
+        row = q.get()
+        
         return row
         
     #///////////////////////////////////////

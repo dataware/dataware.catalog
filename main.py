@@ -28,8 +28,8 @@ def user_home( ):
     except Exception, e:
         return user_error( e )
    
-    redirect("/audit")
-    #return template( "home_page_template", REALM=REALM, user=user);
+    #redirect("/audit")
+    return template( "home_page_template", REALM=REALM, user=user);
 
 #///////////////////////////////////////////////
 

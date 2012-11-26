@@ -447,6 +447,9 @@ class AuthorizationModule( object ) :
     def client_request( self, 
         user_name, client_id, state, client_uri, json_scope ):
         
+        log.info("json scope is")
+        log.info(json_scope)
+        
         try:
             #check that the user_id exists and is valid
             user = self.db.user_fetch_by_name( user_name )
@@ -455,6 +458,7 @@ class AuthorizationModule( object ) :
                     "invalid_request", "The specified user name is not recognized" ) 
      
             #check that the client_id exists and is valid
+            
             
             client = self.db.client_fetch_by_id( client_id )
              
@@ -465,6 +469,7 @@ class AuthorizationModule( object ) :
            
             #check that the scope unpacks
             try:
+               
                 scope = json.loads( 
                     json_scope.replace( '\r\n','\n' ), 
                     strict=False 
@@ -473,6 +478,8 @@ class AuthorizationModule( object ) :
                 resource_name = scope[ "resource_name" ]
                 expiry_time = scope[ "expiry_time" ]
                 query = scope[ "query" ] 
+                
+                log.info("processor install request FOR %s" % resource_name)
               
             except Exception, e:
                 return self._format_submission_failure(
@@ -493,7 +500,9 @@ class AuthorizationModule( object ) :
             #so far so good. Add the request to the user's database
             #Note that if the resource the client has requested access to
             #doesn't exist, the database will throw a foreign key error.
-  
+            log.info("installing  processor FOR")
+            log.info(resource.resource)
+            
             self.db.processor_insert( 
                 user.user_id,                                    
                 client, 
