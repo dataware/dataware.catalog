@@ -364,7 +364,7 @@ class AuthorizationModule( object ) :
             if resource == None :
                 return self._format_access_failure(
                     "invalid_grant", 
-                    "Authorization Code supplied is unrecognized" 
+                    "Authorization Code: %s supplied is unrecognized" % auth_code 
                 )  
             
             if not resource.install_token  :
@@ -634,6 +634,7 @@ class AuthorizationModule( object ) :
         data = urllib.urlencode( {
                 'install_token': install.install_token,
                 'client_id': processor.client.client_id,
+                'resource_name': processor.resource.resource_name,
                 'query': processor.query,
                 'expiry_time': int(processor.expiry_time),
             }
@@ -723,13 +724,14 @@ class AuthorizationModule( object ) :
 
             #so far so good. Fetch the request that corresponds 
             #to the auth_code that has been supplied
-         
+            
+            log.info("getting processor corresponding to auth_code %s" % auth_code)
             processor = self.db.processor_fetch_by_auth_code( auth_code )
             
             if processor == None :
                 return self._format_access_failure(
                     "invalid_grant", 
-                    "Authorization Code supplied is unrecognized" 
+                    "Client - Authorization Code supplied is unrecognized" 
                 )  
             
             if not processor.access_token :

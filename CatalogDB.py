@@ -9,7 +9,9 @@ log = logging.getLogger( "console_log" )
 
 class DictModel(db.Model):
     def to_dict(self):  
-        return dict([(p,unicode(getattr(self, p)) if (not isinstance(getattr(self, p),db.Model)) else getattr(self, p).to_dict()) for p in self.properties()])
+        mydict = dict([(p,unicode(getattr(self, p)) if (not isinstance(getattr(self, p),db.Model)) else getattr(self, p).to_dict()) for p in self.properties()])
+        mydict.update({'id':self.key().id()})
+        return mydict
         
 class CatalogUser(DictModel):
     """Models a user of the dataware Catalog."""
@@ -309,19 +311,16 @@ class CatalogDB():
     def install_fetch_by_name( self, user_id, resource_name ) :
 
         if not resource_name: return None
-        log.info("seacrhing on user_id %s resourcename %s" % (user_id, resource_name))
-       
         q = db.Query(CatalogInstall)
         q.filter('user_id =', user_id)
         q.filter('resource_name =', resource_name)
         row = q.get()
-        
         return row
         
     #///////////////////////////////////////
               
     def install_fetch_by_auth_code( self, auth_code ) :
-        
+        log.info("fetching by authcode: %s", auth_code)
         if auth_code :
             q = db.Query(CatalogInstall)
             q.filter('auth_code =', auth_code)

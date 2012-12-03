@@ -739,7 +739,12 @@ def user_audit():
             index = [ m.start() for m in re.finditer( r"\n", processor.query) ][ PREVIEW_ROWS ]
             processor.preview = "%s\n..." % processor.query[ 0:index ]
         except:
+            log.error('failed to create preview for processor!') 
             processor.preview = processor.query
+    
+    log.debug("creating audit template for processors!");
+    log.debug(processors)
+    log.debug(json.dumps([p.to_dict() for p in processors]))
     
     return template( 
         "audit_page_template", 

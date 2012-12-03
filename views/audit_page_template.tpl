@@ -251,6 +251,11 @@
                 <th>action</th>
             </tr>   
         </thead>  
+        <tbody>
+            <tr data-bind="foreach:{processors}">
+                <td> <span data-bind="text: client.client_domain"></span></td>
+            </tr>
+        </tbody>
         
         <tbody> 
             %for processor in processors:
