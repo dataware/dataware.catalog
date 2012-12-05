@@ -727,6 +727,8 @@ class AuthorizationModule( object ) :
             
             log.info("getting processor corresponding to auth_code %s" % auth_code)
             processor = self.db.processor_fetch_by_auth_code( auth_code )
+            log.info("got processor")
+            log.info(processor)
             
             if processor == None :
                 return self._format_access_failure(
@@ -739,11 +741,17 @@ class AuthorizationModule( object ) :
                     "server_error", 
                     "No access token seems to be available for that code" 
                 )
-        
+            
+            log.info("returning %s" % self._format_access_success( processor.access_token ))
+            
             return self._format_access_success( processor.access_token ) 
             
         #determine if there has been a database error
         except Exception:
+            log.info("returning %s" % self._format_access_failure(
+                "server_error", 
+                "An unknown error has occurred" 
+            ))     
             return self._format_access_failure(
                 "server_error", 
                 "An unknown error has occurred" 

@@ -183,8 +183,24 @@ class CatalogDB():
                 return None
         else :
             return None    
+    
+    def user_update_token(self, user_id, token):
+        if user_id :
+            log.info("updating user")
+            log.info(user_id)
+            q = db.Query(CatalogUser)
+            q.filter('user_id =', user_id)
+            user = q.get()
+            log.info("user is ")
+            log.info(user)
+            if not user is None:
+                user.channel_token = token
+                user.put()
+                return True   
         
-
+        return False
+    
+    
     #///////////////////////////////////////////////////////////////////////////////////////////
     
            
@@ -375,6 +391,7 @@ class CatalogDB():
             return None              
 
     
+        
     #///////////////////////////////////////
                
     def processor_update( self, processor_id, request_status, access_token, auth_code ) :

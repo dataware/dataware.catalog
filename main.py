@@ -177,6 +177,23 @@ def user_register():
 #TODO: make sure that redirect uri's don't have a / on the end
 
 
+@route("/refreshtoken", method="GET")
+def refreshtoken():
+    try:
+        user = _user_check_login()
+    except RegisterException, e:
+        redirect( "/register" ) 
+    except LoginException, e:
+        return user_error( e.msg )
+    except Exception, e:
+        return user_error( e ) 
+    
+    token = channel.create_channel(user.email)
+    log.info("recreated channel token %s" % token)            
+    db.user_update_token(user.user_id, token) 
+    log.info("updated user token");
+    return json.dumps({'token':token});
+    
 @route("/sendmessage", method="POST")
 def sendmessage():
     try:
@@ -192,7 +209,7 @@ def sendmessage():
     
     token = channel.send_message(user.email, "hello!!!")
     
-    log.info("done sending a message!")
+    log.info("finshed sending a message!")
 
 @route( "/resource_register", method = "POST" )
 @route( "/user/:user_name/resource_register", method = "GET" )
@@ -240,7 +257,12 @@ def resource_request_endpoint():
         );
 
     #Then check that the resource has registered
+    log.info("FETCHING RESOURCE BY ID %s" % resource_id)
+    
     resource = db.resource_fetch_by_id( resource_id ) 
+    
+    log.info(resource)
+    
     if ( not resource ):
         return template( 'resource_request_error_template', 
            error = "Resource isn't registered with us, so cannot install."
@@ -485,7 +507,8 @@ def client_access_endpoint():
     grant_type = request.GET.get( "grant_type", None )
     client_uri = request.GET.get( "redirect_uri", None )
     auth_code = request.GET.get( "code", None )    
-        
+    log.info("doing a client access for access code %s" % auth_code)
+     
     result = am.client_access( 
         grant_type = grant_type,
         client_uri = client_uri,

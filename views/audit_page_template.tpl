@@ -42,138 +42,6 @@
 		$.prompt( msg,  {  buttons: { Continue: true }, } )
 	}
 
-	////////////////////////////////////////////////////
-
-	function authorize_request( processor_id ) {
-		$.prompt(
-			'Are you sure you want to authorize this processing request?', 
-			{ 
-				buttons: { Yes: true, Cancel: false },
-				callback: function ( v, m, f ) { 
-					if ( v == false ) return;
-					else authorize_request_ajax( processor_id )
-				}
-			}
-		)
-	}
-
-	////////////////////////////////////////////////////
-
-	function reject_request( processor_id ) {
-		$.prompt(
-			'Are you sure you want to reject this processing request?', 
-			{ 
-				buttons: { Yes: true, Cancel: false },
-				callback: function ( v, m, f ) { 
-					if ( v == false ) return;
-					else reject_request_ajax( processor_id )
-				}
-			}
-		)
-	}
-
-	////////////////////////////////////////////////////
-
-	function revoke_request( processor_id ) {
-		$.prompt(
-			'Are you sure you want to revoke this processing request?', 
-			{ 
-				buttons: { Yes: true, Cancel: false },
-				callback: function ( v, m, f ) { 
-					if ( v == false ) return;
-					else revoke_request_ajax( processor_id )
-				}
-			}
-		)
-	}
-
-	////////////////////////////////////////////////////
-
-	function authorize_request_ajax( processor_id ) {
-		$.ajax({
-			type: 'POST',
-			url: "/client_authorize",
-			data: "processor_id=" + processor_id,
-			success: function( data, status  ) {
-				data = eval( '(' + data + ')' );
-				if ( data.success ) {
-					window.location = data.redirect;
-				} else if ( data.cause == "resource_provider" ) {
-					forwarding_box( data.error, data.redirect );
-				} else {
-					error_box( data.error );
-				}
-			},
-			error: function( data, status ) {
-				error_box( "Unable to contact server at this time. Please try again later." );
-			}
-		});
-	}
-
-	////////////////////////////////////////////////////
-
-	function reject_request_ajax( processor_id ) {
-		$.ajax({
-			type: 'POST',
-			url: "/client_reject",
-			data: "processor_id=" + processor_id,
-			success: function( data, status ) {
-				data = eval('(' + data + ')');
-				if ( data.success ) {
-					window.location = data.redirect;
-				} else {
-					error_box( data.error );
-				}
-			},
-			error: function( data, status ) {
-				error_box( "Unable to contact server at this time. Please try again later." );
-			}
-		});		
-	}
-	
-
-	////////////////////////////////////////////////////
-
-	function revoke_request_ajax( processor_id ) {
-		$.ajax({
-			type: 'POST',
-			url: "/client_revoke",
-			data: "processor_id=" + processor_id,
-			success: function( data, status  ) {
-				data = eval( '(' + data + ')' );
-				if ( data.success ) {
-					window.location = data.redirect;
-				} else if ( data.cause == "resource_provider" ) {
-	 				resource_error_box( data.error )
-				} else {
-					error_box( data.error )
-				}
-			},
-			error: function( data, status ) {
-				error_box( "Unable to contact server at this time. Please try again later." );
-			}
-		});
-	}
-	
-	
-	function test_query( resource_uri, query, parameters ) {
-		$.ajax({
-			type: 'POST',
-			url: "/test_query",
-			dataType: "json",
-			data: {
-			    resource_uri: resource_uri,
-			    query: query,
-			    parameters: parameters
-			},
-			success: function( data, status  ) {
-				console.log(data)
-			},
-			error: function( data, status ) {
-				error_box( "Unable to contact resource at this time. Please try again later." );
-			}
-		});
-	}
 
 	////////////////////////////////////////////////////
 
@@ -188,34 +56,6 @@
 			full.css( "display", "none" );
 			preview.css( "display", "block" );
 		}
-	}
-	
-	
-	function test_uri(resource_uri, query, parameters){
-	    window.location = resource_uri + "/test_query?query=" + encodeURIComponent(query) + "&parameters=" + encodeURIComponent(parameters); 
-	}
-	
-	function showtoken(token){
-	    console.log(token);
-	    console.log("subscribing");
-	    channel = new goog.appengine.Channel(token);
-	    socket = channel.open();
-	    socket.onopen = function(){console.log("opened")};
-	    socket.onmessage = function(data){console.log(data);alert(data)}
-	}
-	
-	function sendmessage(){
-	    $.ajax({
-			type: 'POST',
-			url: "/sendmessage",
-			data: "",
-			success: function( data, status  ) {
-				
-			},
-			error: function( data, status ) {
-				error_box( "Unable to contact server at this time. Please try again later." );
-			}
-		});
 	}
 	
 </script>
@@ -235,9 +75,6 @@
     
     <h4>AUDIT</h4>
     
-    <a class="btn btn-primary" href="javascript:showtoken('{{user.channel_token}}')">see token</a> 
-    <a class="btn btn-primary" href="javascript:sendmessage()">send message</a> 
-    
     <table class="table table-condensed table-striped table-bordered">
     
        <thead>
@@ -251,39 +88,37 @@
                 <th>action</th>
             </tr>   
         </thead>  
-        <tbody>
-            <tr data-bind="foreach:{processors}">
-                <td> <span data-bind="text: client.client_domain"></span></td>
+        <tbody data-bind="foreach: processors"> 
+            <tr>
+                <td><span data-bind="text:id"></span></td>
+                <td>
+                    <a data-bind="attr:{href:client().client_domain}">
+                        <span data-bind="text:client().client_name"></span>
+                    </a>
+                </td>
+                <td><span data-bind="text:resource().resource_name"></span></td> 
+                <td><span data-bind="text:request_status"></span></td> 
+                <td><span data-bind="text:expiry_date"></span></td> 
+                <td><code class="brush: python; toolbar: false" data-bind="text:query"></code></td>
+                <td>
+                    <div class="btn-group" data-bind="visible:pending">
+                        <a class="btn btn-primary" href="#" data-bind="click:authorise_request">authorise</a> 
+                        <a class="btn btn-primary" href="#" data-bind="click:reject">reject</a> 
+                        <a class="btn btn-primary" href="#" data-bind="click:test">test</a> 
+                    </div>
+	
+					<div data-bind="visible:accepted">
+						<a href='#' data-bind="click:revoke_request">revoke</a>
+					</div>			
+                </td> 
             </tr>
         </tbody>
-        
-        <tbody> 
-            %for processor in processors:
-            <tr>
-                <td>{{processor.key().id()}}</td>
-                <td><a href="{{processor.client.client_domain}}">{{processor.client.client_name}}</a></td>
-                <td>{{processor.resource.resource_name}}</td> 
-                <td>{{processor.request_status}}</td> 
-                %import time
-                <td>{{time.strftime( "%d %b %Y %H:%M", time.gmtime( processor.expiry_time) )}}</td> 
-                <td><code class="brush: python; toolbar: false">{{processor.query}}</code></td>
-                <td>
-                    %if processor.request_status == "PENDING":
-                        <div class="btn-group">
-                            <a class="btn btn-primary" href='javascript:authorize_request({{processor.key().id() }})'>authorize</a> 
-                            <a class="btn btn-primary" href='javascript:reject_request({{processor.key().id() }})'>reject</a>
-						    <a class="btn btn-primary" href='javascript:test_uri("{{processor.resource.resource_uri}}","{{processor.query}}","{}")'>test</a>
-                        </div>
-						
-						
-					%elif processor.request_status == "ACCEPTED":
-						<a href='javascript:revoke_request({{processor.key().id()}})'>revoke</a>
-					%end
-                </td> 
-            </tr> 
-            %end
-        </tbody>
     </table>  
+    
+    
+    
+    
+    
 <!-- Finally, to actually run the highlighter, you need to include this JS on your page -->
 <script type="text/javascript">
 	SyntaxHighlighter.config.tagName = "code";
@@ -292,15 +127,274 @@
 
 <script type="text/javascript">
     
-    function CatalogModel(){
-        console.log('creating new catalog model...');
-        this.processors = ko.observableArray({{!processorjson}});
-        console.log(this.processors());
+    //setup namespace
+    var dw = dw || {};
+    
+    dw.ajaxservice = (function(){
+        var
+        
+            ajaxPostJson = function(url, jsonIn, success_callback, error_callback){
+                $.ajax({
+                        url: url,
+                        contentType: 'json',
+                        type: "POST",
+                        data: jsonIn,
+                        dataType: 'json',
+                        success: function(data, status){
+                            success_callback(data, status)    
+                        },
+                        error: function(data, status){
+                            if (error_callback){
+                                error_callback(data,status);
+                            }       
+                        }
+                });
+            }
+        
+            ajaxGetJson = function(url, jsonIn, success_callback, error_callback){
+                $.ajax({
+                        url: url,
+                        contentType: 'json',
+                        type: "GET",
+                        timeout: 4000,
+                        dataType: 'json',
+                        
+                        success: function(result){
+                            success_callback(result)    
+                        },
+                        error: function(XMLHttpRequest, textStatus, errorThrown){
+                            if (error_callback){
+                                error_callback(XMLHttpRequest, textStatus, errorThrown);
+                            }       
+                        }
+                });
+            }
+            
+            return{
+                ajaxPostJson: ajaxPostJson,
+                ajaxGetJson: ajaxGetJson
+            }
+    })();
+    
+    //processor model
+    dw.processor = function(){
+        
+        var self = this;
+        
+        this.id = ko.observable();
+        this.client = ko.observable();
+        this.request_status = ko.observable("PENDING");
+        this.query = ko.observable();
+        this.created = ko.observable();
+        this.expiry_time = ko.observable();
+        this.resource = ko.observable();
+        this.state = ko.observable();
+        this.user_id = ko.observable();
+        this.accesstoken = ko.observable();
+        this.auth_code = ko.observable();
+        
+        this.expiry_date = ko.computed(function(){
+        
+            a = new Date(this.expiry_time() * 1000); //date takes milliseconds since epoch!
+            months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            year = a.getFullYear();
+            month = months[a.getMonth()];
+            day = a.getDate();
+            hour = a.getUTCHours();
+            min = a.getUTCMinutes();
+            sec = a.getUTCSeconds();
+            return  day+' '+month+' '+year ;
+        }, this);
+        
+        this.accepted = ko.computed(function(){
+            return this.request_status() == "ACCEPTED";
+        },this);
+        
+        this.pending = ko.computed(function(){
+            return this.request_status() == "PENDING";
+        },this);
+        
+        this.authorise_request = function(){
+            $.prompt(
+			    'Are you sure you want to authorize this processing request?', 
+			    { 
+				    buttons: { Yes: true, Cancel: false },
+				    callback: function ( v, m, f ) { 
+					    if ( v == false ) return;
+					    else self.authorise()
+				    }
+			    }
+		    );
+        }
+        
+        this.authorise = function(){
+        
+            success_callback = function(data, status){
+				if ( data.success ) {
+					window.location = data.redirect;
+				} else if ( data.cause == "resource_provider" ) {
+					forwarding_box( data.error, data.redirect );
+				} else {
+					error_box( data.error );
+				}
+            };
+            
+            error_callback = function(data, status){
+                error_box( "Unable to contact server at this time. Please try again later." );
+            };
+            
+            dw.ajaxservice.ajaxPostJson(
+                                        '/client_authorize', 
+                                        {'processor_id':self.id}, 
+                                        success_callback, 
+                                        error_callback
+                                        );
+        };
+        
+        this.reject_request = function() {
+            $.prompt(
+                'Are you sure you want to reject this processing request?', 
+                { 
+                    buttons: { Yes: true, Cancel: false },
+                    callback: function ( v, m, f ) { 
+                        if ( v == false ) return;
+                        else self.reject();
+                    }
+                }
+            )
+	    };
+	    
+        this.reject = function(){
+        
+            success_callback = function(data, status){
+				if ( data.success ) {
+					window.location = data.redirect;
+				} else if ( data.cause == "resource_provider" ) {
+					forwarding_box( data.error, data.redirect );
+				} else {
+					error_box( data.error );
+				}
+            };
+            
+            error_callback = function(data, status){
+                error_box( "Unable to contact server at this time. Please try again later." );
+            };
+            
+            dw.ajaxservice.ajaxPostJson(
+                                        '/client_request',
+                                        {'processor_id':self.id}, 
+                                        success_callback, 
+                                        error_callback
+                                       );
+        };
+        
+        this.revoke_request = function(){
+            $.prompt(
+                'Are you sure you want to revoke this processing request?', 
+                { 
+                    buttons: { Yes: true, Cancel: false },
+                    callback: function ( v, m, f ) { 
+                        if ( v == false ) return;
+                        else self.revoke()
+                    }
+                }
+            )
+        };
+        
+        
+        this.revoke = function(){
+        
+            success_callback = function( data, status  ) {
+			
+				if ( data.success ) {
+					window.location = data.redirect;
+				} else if ( data.cause == "resource_provider" ) {
+	 				resource_error_box( data.error )
+				} else {
+					error_box( data.error )
+				}
+			};
+			
+			error_callback = function( data, status ) {
+				error_box( "Unable to contact server at this time. Please try again later." );
+			};
+			
+            dw.ajaxservice.ajaxPostJson(
+                                        '/client_revoke',
+                                        {'processor_id':self.id}, 
+                                        success_callback, 
+                                        error_callback
+                                       );
+        };
+        
+        this.test = function(){
+            window.location = self.resource.resource_uri + "/test_query?query=" + encodeURIComponent(self.query) + "&parameters={}"    
+        };
+        
     }
+    
+    //main view model
+    dw.catalog = (function(){
+        var
+            processors = ko.observableArray(),
+            channel = {},
+            socket = {},
+            
+            refreshToken = function(){
+            
+                success_callback = function(data, status){
+                    console.log(data);
+                    subscribe(data.token);
+                }
+                
+                dw.ajaxservice.ajaxGetJson('/refreshtoken', null, success_callback); 
+                
+            },
+            
+	        subscribe = function(token){
+	            channel = new goog.appengine.Channel(token);
+	            socket = channel.open();
+	            socket.onopen = function(){console.log("opened channel!")};
+	            socket.onclose = function(){console.log("closed channel!!")};
+	            socket.onerror = function(error){
+	                console.log("REFRESHING TOKEN");
+	                refreshToken();
+	            };
+	            socket.onmessage = function(data){console.log(data);alert(data)}    
+	        },
+	        
+            loadData = function(data){
+                $.each(data, function(i,p){
+                    processors.push(new dw.processor()
+                                    .id(p.id)
+                                    .client(p.client)
+                                    .request_status(p.request_status)
+                                    .query(p.query)
+                                    .created(p.created)
+                                    .expiry_time(p.expiry_time)
+                                    .resource(p.resource)
+                                    .state(p.state)
+                                    .user_id(p.user_id)
+                                    .accesstoken(p.accesstoken)
+                                    .auth_code(p.auth_code)
+                                    );
+                });
+                console.log(processors);
+            }
+            
+        return{
+            processors: processors,
+            loadData: loadData,
+            subscribe: subscribe
+        }    
+    })();
 
-    var cm = new CatalogModel();
-    ko.applyBindings(cm);    
-
+    $(function(){
+        dw.catalog.loadData({{!processorjson}});
+        dw.catalog.subscribe('{{user.channel_token}}');
+        ko.applyBindings(dw.catalog);    
+    });
+    
 </script>
 <!-- FOOTER ------------------------------------------------------------------>
 %include footer
