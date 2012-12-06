@@ -5,6 +5,8 @@
 <link rel="stylesheet" type="text/css" href="./static/bootstrap/css/bootstrap.css" /> 
 <script type="text/javascript" src="./static/jquery-1.6.min.js"></script> 
 <script type="text/javascript" src="./static/knockout-2.2.0.js"></script>
+<script type="text/javascript" src="/_ah/channel/jsapi"></script>
+
  
 <script>	
 	$( document ).ready( function() {
@@ -14,7 +16,6 @@
 
 	});
 </script>
-
 </head>
 
 <body>
@@ -33,4 +34,4 @@
             </ul>
         </div>
     </div>
-<script type="text/javascript" src="/_ah/channel/jsapi"></script>
+

@@ -257,11 +257,12 @@ def resource_request_endpoint():
         );
 
     #Then check that the resource has registered
-    log.info("FETCHING RESOURCE BY ID %s" % resource_id)
+    #here the resource id is the resource's datastore Key rather 
+    #than the resource_id attribute, as querying on the attribute 
+    #is eventually consistent. fetch the object by its key is
+    #strongly consistent.
     
-    resource = db.resource_fetch_by_id( resource_id ) 
-    
-    log.info(resource)
+    resource = db.resource_fetch_by_key( resource_id ) 
     
     if ( not resource ):
         return template( 'resource_request_error_template', 
@@ -395,6 +396,7 @@ def client_request_endpoint( user_name = None ):
     json_scope = request.forms.get( "scope" )
 
     log.info("client request endpoint %s %s %s" % (client_id, state, client_uri))
+    
     result = am.client_request( 
         user_name = user_name,
         client_id = client_id,
@@ -402,12 +404,12 @@ def client_request_endpoint( user_name = None ):
         client_uri = client_uri,
         json_scope = json_scope 
     )
-    
+ 
     log.debug( 
         "Catalog_server: Client Request from %s to %s: %s" 
         % ( client_id, user_name, result ) 
     )
-        
+       
     return result
 
     

@@ -103,7 +103,7 @@
                 <td>
                     <div class="btn-group" data-bind="visible:pending">
                         <a class="btn btn-primary" href="#" data-bind="click:authorise_request">authorise</a> 
-                        <a class="btn btn-primary" href="#" data-bind="click:reject">reject</a> 
+                        <a class="btn btn-primary" href="#" data-bind="click:reject_request">reject</a> 
                         <a class="btn btn-primary" href="#" data-bind="click:test">test</a> 
                     </div>
 	
@@ -281,7 +281,7 @@
             };
             
             dw.ajaxservice.ajaxPostJson(
-                                        '/client_request',
+                                        '/client_reject',
                                         {'processor_id':self.id}, 
                                         success_callback, 
                                         error_callback
@@ -328,7 +328,7 @@
         };
         
         this.test = function(){
-            window.location = self.resource.resource_uri + "/test_query?query=" + encodeURIComponent(self.query) + "&parameters={}"    
+            window.location = self.resource().resource_uri + "/test_query?query=" + encodeURIComponent(self.query()) + "&parameters={}"    
         };
         
     }
@@ -360,7 +360,24 @@
 	                console.log("REFRESHING TOKEN");
 	                refreshToken();
 	            };
-	            socket.onmessage = function(data){console.log(data);alert(data)}    
+	            socket.onmessage = function(event){
+	                 console.log(event);
+	                 p = $.parseJSON(event.data);
+	                 console.log(p);
+	                 processors.push(new dw.processor()
+                                    .id(p.id)
+                                    .client(p.client)
+                                    .request_status(p.request_status)
+                                    .query(p.query)
+                                    .created(p.created)
+                                    .expiry_time(p.expiry_time)
+                                    .resource(p.resource)
+                                    .state(p.state)
+                                    .user_id(p.user_id)
+                                    .accesstoken(p.accesstoken)
+                                    .auth_code(p.auth_code)
+                    );
+	            }    
 	        },
 	        
             loadData = function(data){

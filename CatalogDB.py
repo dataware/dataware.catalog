@@ -251,7 +251,19 @@ class CatalogDB():
         resource = CatalogResource(resource_id=resource_id, resource_name=resource_name,
         resource_uri=resource_uri, description=description, logo_uri=logo_uri, web_uri=web_uri, namespace=namespace, registered=time.time())
         resource.put()
+        return resource.key()
         
+    
+    #///////////////////////////////////////
+    
+    def resource_fetch_by_key(self, resource_key):
+        if not resource_key:
+            return None
+            
+        log.info("getting resource by key %s" % resource_key)
+        return db.get(resource_key)
+        
+         
     #///////////////////////////////////////
 
               
@@ -362,6 +374,7 @@ class CatalogDB():
         processor = CatalogProcessor(user_id=user_id, client=client, state=state,resource=resource, expiry_time=float(expiry_time), query=query_code, request_status=request_status, created=time.time())
         
         processor.put()
+        return processor
         
     #///////////////////////////////////////
 

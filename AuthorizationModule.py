@@ -5,6 +5,8 @@ Created on 12 April 2011
 
 from new import * #@UnusedWildImport
 from google.appengine.api import urlfetch
+from google.appengine.api import channel
+
 import json
 #import MySQLdb
 import logging
@@ -253,7 +255,15 @@ class AuthorizationModule( object ) :
             resource_id = self._generate_access_code()
             log.info("generated access code %s" % resource_id)
             
-            self.db.resource_insert( 
+            #rather than send back the resource_id, we send back the key of the resource
+            #once this result is sent back to the catalog, it will call /resource_request
+            #which in turn will query the resource using the 'resource_id' sent in the following
+            #response.  Because this happens immediately, in some instances the datastore will
+            #not be able to find the resource when it does a query on resource_id, since the datastore
+            #is 'eventually consistent' - by doing a lookup on the key, rather than resource_id, we 
+            #get round this problem, since requests by key are strongly consistent.
+            
+            key = self.db.resource_insert( 
                 resource_id = resource_id,                                    
                 resource_name = resource_name,
                 resource_uri = resource_uri,
@@ -264,12 +274,15 @@ class AuthorizationModule( object ) :
             )
 
             #self.db.commit()
-
+            
+            
             json_response = { 
                 'success': True,
-                'resource_id': resource_id
+                'resource_id': str(key)
             } 
         
+            log.info ("ok am here now")
+            
             return json.dumps( json_response );                
             
          
@@ -296,6 +309,7 @@ class AuthorizationModule( object ) :
 
             #check that the resource has been registered
             resource = self.db.resource_fetch_by_id( resource_id )
+            
             if not ( resource ) :
                 return self._format_failure( 
                     "The resource has not been registered, and so cannot be installed." ) 
@@ -449,6 +463,8 @@ class AuthorizationModule( object ) :
         
         log.info("json scope is")
         log.info(json_scope)
+        user = None
+        processor = None
         
         try:
             #check that the user_id exists and is valid
@@ -500,10 +516,8 @@ class AuthorizationModule( object ) :
             #so far so good. Add the request to the user's database
             #Note that if the resource the client has requested access to
             #doesn't exist, the database will throw a foreign key error.
-            log.info("installing  processor FOR")
-            log.info(resource.resource)
             
-            self.db.processor_insert( 
+            processor = self.db.processor_insert( 
                 user.user_id,                                    
                 client, 
                 state,
@@ -512,7 +526,8 @@ class AuthorizationModule( object ) :
                 query,
                 Status.PENDING
             )
-           
+             
+            
             return self._format_submission_success() 
         
        
@@ -521,8 +536,10 @@ class AuthorizationModule( object ) :
             return self._format_submission_failure(
                 "server_error", "Database problems are currently being experienced"
             ) 
+        finally: 
+            if not (processor is None):    
+                channel.send_message(user.email, json.dumps(processor.to_dict()))
             
-    
     #///////////////////////////////////////////////
     
     
