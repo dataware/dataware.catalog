@@ -346,9 +346,11 @@ class CatalogDB():
         return row
         
     #///////////////////////////////////////
+  
               
     def install_fetch_by_auth_code( self, auth_code ) :
         log.info("fetching by authcode: %s", auth_code)
+        
         if auth_code :
             q = db.Query(CatalogInstall)
             q.filter('auth_code =', auth_code)
@@ -388,7 +390,8 @@ class CatalogDB():
 
     #///////////////////////////////////////
 
-               
+         
+    
     def processor_fetch_by_auth_code( self, auth_code ) :
 
         if auth_code :
@@ -403,7 +406,10 @@ class CatalogDB():
         else :
             return None              
 
-    
+    def processor_fetch_by_key( self, key ) :
+        if key:
+            return db.get(key)
+        return None
         
     #///////////////////////////////////////
                

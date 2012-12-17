@@ -603,7 +603,14 @@ class AuthorizationModule( object ) :
                      Resource Provider. Try again later." )
         
             #all is well so register the processing request as having been updated.
-            auth_code = self._generate_access_code()
+            
+            #instead of generating an access code we return the key of the processor entry in the 
+            #datatstore as this will mean that the immediate exchange of an authcode for an
+            #access code will not fail.
+            
+            #auth_code = self._generate_access_code()
+         
+            auth_code = str(processor.key())
             
             log.info("authcode is %s" % auth_code)
             
@@ -618,7 +625,8 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "Server is currently experiencing database problems. \
                      Please try again later." )     
-                 
+            log.info("result is")
+            log.info(result)     
             #self.db.commit()
             
             #the processing request has been accepted so return a success redirect url
@@ -741,9 +749,16 @@ class AuthorizationModule( object ) :
 
             #so far so good. Fetch the request that corresponds 
             #to the auth_code that has been supplied
-            
+    
+            # the authcode is swapped for a token proper during an exchange with a client.  This
+            # happens over a short space of time which can mean, due to the gae datastores 
+            # eventual consistency, that a legitimate auth_code is not found.  Instead we've made 
+            # the authcode the key, as queries on key are strongly consistent.      
+    
             log.info("getting processor corresponding to auth_code %s" % auth_code)
-            processor = self.db.processor_fetch_by_auth_code( auth_code )
+            #processor = self.db.processor_fetch_by_auth_code( auth_code )
+            
+            processor = self.db.processor_fetch_by_key(auth_code)
             log.info("got processor")
             log.info(processor)
             
