@@ -328,7 +328,7 @@ class AuthorizationModule( object ) :
             install_token = self._generate_access_code()
             auth_code = self._generate_access_code()
             
-            self.db.install_insert( 
+            install = self.db.install_insert( 
                 user.user_id,
                 resource, 
                 state,
@@ -339,10 +339,14 @@ class AuthorizationModule( object ) :
             #self.db.commit()
             
             #the request has been accepted so return a success redirect url
+            #we use pass back the key of the install's datastore object
+            #rather than the newly generated auth_code, as eventual consistency
+            #can mean that an immediate lookup on authcode will fail (which happens in
+            #resource_access
             return self._format_auth_success(
                  "%s/install_complete" % ( resource_uri, ),  
                  state, 
-                 auth_code
+                 str(install.key())
             )                            
 
         except:
@@ -371,9 +375,10 @@ class AuthorizationModule( object ) :
                 )  
 
             #so far so good. Fetch the request that corresponds 
-            #to the auth_code that has been supplied
+            #to the auth_code that has been supplied (fetch by key rather than
+            #by auth_code, which can fail dues to gae's eventual consistency.
             
-            resource = self.db.install_fetch_by_auth_code( auth_code )
+            resource = self.db.install_fetch_by_key( auth_code )
           
             if resource == None :
                 return self._format_access_failure(

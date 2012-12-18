@@ -316,7 +316,7 @@ class CatalogDB():
         install = CatalogInstall( user_id=user_id, resource=resource, resource_name=resource.resource_name, resource_id=resource.resource_id, state=state, install_token=install_token, auth_code=auth_code, created=time.time(), ctime=time.time() )
         
         install.put()
-        
+        return install
         
     def install_fetch_by_id( self, user_id, resource_id ) :
         
@@ -362,8 +362,14 @@ class CatalogDB():
                 return None
         else :
             return None
+    
+    def install_fetch_by_key( self, install_key ) :    
         
+        if not install_key:
+            return None
         
+        return db.get(install_key)
+            
     #////////////////////////////////////////////////////////////////////////////////////////////
 
     def processor_insert( self, 
