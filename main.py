@@ -6,6 +6,7 @@ from CatalogDB import *
 import logging
 import AuthorizationModule
 import wsgiref.util
+import settings
 
 from framework import bottle
 from framework.bottle import *
@@ -800,10 +801,9 @@ def _valid_email( str ):
 #///////////////////////////////////////////////
       
 db = CatalogDB()
-WEB_PROXY=None#http://mainproxy.nottingham.ac.uk:8080"
+WEB_PROXY=None
 ROOT_PAGE = "/"
-#REALM = "http://127.0.0.1:8080"
-REALM = "http://datawarecatalog.appspot.com"
+REALM = settings.REALM
 EXTENSION_COOKIE = "catalog_logged_in"
 
 try:    
