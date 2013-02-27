@@ -15,6 +15,7 @@ import urllib2
 import base64
 import hashlib
 import random
+import SqlParser 
 
 #setup logger for this module
 log = logging.getLogger( "console_log" )
@@ -499,7 +500,12 @@ class AuthorizationModule( object ) :
                 resource_name = scope[ "resource_name" ]
                 expiry_time = scope[ "expiry_time" ]
                 query = scope[ "query" ] 
-                
+		
+		#check the query validity
+                log.info("ECHEKING CONSTRAINTS")
+		if not self._check_constraints(resource_name,query):                
+ 		  return self._format_submission_failure("invalid_query", "query violates constraints" )
+
                 log.info("processor install request FOR %s" % resource_name)
               
             except Exception, e:
@@ -547,6 +553,34 @@ class AuthorizationModule( object ) :
             
     #///////////////////////////////////////////////
     
+    def _check_constraints(self, resource_name, query):
+        log.info("checking constraints")
+        myresources = [resource_name]
+
+        tables      = SqlParser.extract_tables(query)
+        keywords    = SqlParser.extract_keywords(query)
+
+        log.info("keywords are ")
+        log.info(keywords)
+
+        log.info("tables are ..")
+        log.info(tables)
+
+        log.info("my resources is:")
+        log.info(myresources)
+
+        if len(tables) == 0:
+            return False
+
+        valid = set(tables).issubset(myresources)
+
+        log.info("table constraints met: %r" % valid)
+
+        valid = set(keywords).issubset(self.ALLOWED_KEYWORDS)
+
+        log.info("keyword and table constraints met: %r" % valid)
+
+        return valid
     
     def client_authorize( self, user_id, processor_id ):
 
