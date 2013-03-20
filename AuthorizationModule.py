@@ -229,11 +229,11 @@ class AuthorizationModule( object ) :
             return self._format_submission_failure(
                 "catalog_denied", "A valid resource_name must be provided" )
         
-        if resource_name is None :
+        if redirect_uri is None :
             return self._format_submission_failure(
                 "catalog_denied", "A valid redirect_uri must be provided" )
         
-        if resource_name is None :
+        if namespace is None :
             return self._format_submission_failure(
                 "catalog_denied", "A valid dataware namespace must be provided" )
         
