@@ -263,13 +263,16 @@ def resource_request_endpoint():
     #is eventually consistent. fetch the object by its key is
     #strongly consistent.
     
+    log.info("fetching resource by key %s" % resource_id)
+    
     resource = db.resource_fetch_by_key( resource_id ) 
     
     if ( not resource ):
         return template( 'resource_request_error_template', 
            error = "Resource isn't registered with us, so cannot install."
         );
-    
+   
+    log.info("resource.resource_uri is %s and resource_uri is %s" % (resource.resource_uri, resource_uri)) 
     #And finally check that it has supplied the correct credentials
     if ( resource.resource_uri != resource_uri ):
         return template( 'resource_request_error_template', 

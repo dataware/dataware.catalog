@@ -279,12 +279,12 @@ class CatalogDB():
     
     #///////////////////////////////////////
               
-    def resource_fetch_by_name( self, resource_name ) :
+    def resource_fetch_by_name( self, resource_name, namespace ) :
         
         if not resource_name: return None
         
         q = db.Query(CatalogResource)
-        q.filter('resource_name =', resource_name)
+        q.filter('resource_name =', resource_name).filter('namespace =', namespace)
         
         return q.get()
 

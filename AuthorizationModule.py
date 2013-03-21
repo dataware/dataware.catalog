@@ -73,7 +73,9 @@ class RevokeException ( Exception ):
 
  
 class AuthorizationModule( object ) :
-
+    ALLOWED_KEYWORDS = [
+        'SELECT', 'FROM', 'WHERE', 'LIMIT', 'JOIN', 'LEFT', 'INNER', 'GROUP', 'ORDER', 'BY', 'DISTINCT', 'AND', 'OR', 'ON', 'NOT', 'LIKE', 'COUNT', 'SUM', 'ASC', 'DESC', 'HAVING', 'IF', 'IN'
+    ]
     _WEB_PROXY =  None
     db = None
     
@@ -155,7 +157,8 @@ class AuthorizationModule( object ) :
              
     #///////////////////////////////////////////////
 
-        
+    #THIS NEVER USES THE RESOURCE_ACCESS_URI???
+       
     def _format_auth_success( self, 
         redirect_uri, state, auth_code, resource_access_uri = None ):
 
@@ -166,7 +169,9 @@ class AuthorizationModule( object ) :
             'success':True, 
             'redirect':url
         } 
-            
+        log.info("returning...........")
+	log.info(json.dumps( json_response ))    
+
         return json.dumps( json_response )
 
 
@@ -229,7 +234,7 @@ class AuthorizationModule( object ) :
             return self._format_submission_failure(
                 "catalog_denied", "A valid resource_name must be provided" )
         
-        if redirect_uri is None :
+        if resource_uri is None :
             return self._format_submission_failure(
                 "catalog_denied", "A valid redirect_uri must be provided" )
         
@@ -282,7 +287,6 @@ class AuthorizationModule( object ) :
                 'resource_id': str(key)
             } 
         
-            log.info ("ok am here now")
             
             return json.dumps( json_response );                
             
@@ -502,7 +506,7 @@ class AuthorizationModule( object ) :
                 query = scope[ "query" ] 
 		
 		#check the query validity
-                log.info("ECHEKING CONSTRAINTS")
+                log.info("CHECKING CONSTRAINTS")
 		if not self._check_constraints(resource_name,query):                
  		  return self._format_submission_failure("invalid_query", "query violates constraints" )
 
@@ -576,7 +580,7 @@ class AuthorizationModule( object ) :
 
         log.info("table constraints met: %r" % valid)
 
-        valid = set(keywords).issubset(self.ALLOWED_KEYWORDS)
+        valid = valid and set(keywords).issubset(self.ALLOWED_KEYWORDS)
 
         log.info("keyword and table constraints met: %r" % valid)
 

@@ -1,1 +1,1 @@
-REALM = "datawarecatalog.appspot.com"
+REALM="http://192.168.33.10:5000"
