@@ -250,7 +250,7 @@ class AuthorizationModule( object ) :
         
         log.info("checking if resource already exists.. %s" % resource_name)
         #check the resource does not clash with a previously registered one
-        resource = self.db.resource_fetch_by_name( resource_name )
+        resource = self.db.resource_fetch_by_name( resource_name, namespace )
 
         if ( resource ) :        
             return self._format_submission_failure(

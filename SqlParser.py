@@ -1,9 +1,13 @@
 #code taken from: https://github.com/andialbrecht/sqlparse/blob/master/examples/extract_table_names.py
 
 import sqlparse
+import logging
 from sqlparse.sql import IdentifierList, Identifier
 from sqlparse.tokens import Keyword, DML
-    
+
+log = logging.getLogger( "console_log" )    
+clauses = ['ORDER', 'GROUP']
+
 def is_subselect(parsed):
     if not parsed.is_group():
         return False
@@ -19,6 +23,8 @@ def extract_from_part(parsed):
             if is_subselect(item):
                 for x in extract_from_part(item):
                     yield x
+	    elif item.ttype is Keyword and item.value.upper() in clauses:
+                from_seen = False		
             else:
                 yield item
         elif item.ttype is Keyword and item.value.upper() == 'FROM':
