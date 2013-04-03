@@ -359,6 +359,14 @@ def resource_access_endpoint():
 
 #//////////////////////////////////////////////////////////
 
+@route( "/resource/<resource>/user/<user>", method = "GET" )
+def resource_details(resource, user):
+  
+    resource =  db.resource_fetch_by_user(resource,user)
+    log.debug("got here..")
+    if resource is not None:
+	return json.dumps(resource.to_dict())
+    return "nowt!"
 
 @route( "/client_register", method = "POST" )
 def client_register_endpoint():
@@ -498,7 +506,10 @@ def client_list_resources():
     if am.client_registered(client_id=client_id, client_uri=client_uri):
         log.info("client is registered!!")
         
-        result = json.dumps(db.resource_registered(wsgiref.util.application_uri(request.environ)[:-1]))
+        resource_owner =  request.GET.get( "resource_owner", None )
+        resource_name = request.GET.get( "resource_name", None )
+       
+        result = json.dumps(db.resource_registered(wsgiref.util.application_uri(request.environ)[:-1], resource_owner, resource_name))
         log.info(result)
         return result
     

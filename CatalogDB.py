@@ -280,25 +280,42 @@ class CatalogDB():
     #///////////////////////////////////////
               
     def resource_fetch_by_name( self, resource_name, namespace ) :
-        
+
+        log.info("fetching by name %s" % resource_name)
+ 
         if not resource_name: return None
-        
+
+ 	log.info("am here..")
+       
         q = db.Query(CatalogResource)
         q.filter('resource_name =', resource_name).filter('namespace =', namespace)
         
         return q.get()
 
-    def resource_registered(self, catalog_uri):
-    
+    def resource_registered(self, catalog_uri, resource_owner=None, resource_name=None):
+        
+        log.info("in here and onwer is %s and name is %s", resource_owner, resource_name)
+        
         q = db.Query(CatalogInstall)
          
+        if resource_name is not None:
+            log.info("filtering on resource name")
+            q.filter('resource_name =', resource_name)
+            
         results = q.fetch(limit=1000)
-    
+        
+        log.info("got some results")
+        log.info(results)
+        
         listing = []
          
         for install in results:
             log.info(install)
             qc = db.Query(CatalogUser)
+            
+            if resource_owner is not None:
+                qc.filter('user_name =', resource_owner)
+                
             qc.filter('user_id =', install.user_id)
             user = qc.get()
             log.info(user)
