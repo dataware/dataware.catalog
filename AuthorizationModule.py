@@ -483,9 +483,7 @@ class AuthorizationModule( object ) :
                 return self._format_submission_failure(
                     "invalid_request", "The specified user name is not recognized" ) 
      
-            #check that the client_id exists and is valid
-            
-            
+            #check that the client_id exists and is valid            
             client = self.db.client_fetch_by_id( client_id )
              
             if ( not client ) or client.client_uri != client_uri  :        
@@ -585,6 +583,98 @@ class AuthorizationModule( object ) :
         log.info("keyword and table constraints met: %r" % valid)
 
         return valid
+        
+    def client_experiment_request( self, user_name, state, client_uri, json_scope ):
+        
+        log.info("json scope is")
+        log.info(json_scope)
+        user = None
+        processor = None
+        
+        try:
+            #check that the user_id exists and is valid
+            log.info("username is ************ %s " % user_name)
+            user = self.db.user_fetch_by_name( user_name )
+            if not ( user ) :  
+                log.info("reached here inside user ************ " )      
+                return self._format_submission_failure(
+                    "invalid_request", "The specified user name is not recognized" )
+            #if identified check if experiment client exists for the catalog and resource
+            log.info("before client fetch************")
+            client = self.db.client_fetch_by_name_uri("experiment_client", client_uri)
+            log.info("after client fetch************")
+            if ( not client ) :        
+                client_id = self._generate_access_code()
+                log.info("generated experiment client id %s" % client_id)
+                
+                self.db.client_insert( 
+                client_id = client_id,                                    
+                client_name = "experiment_client",
+                client_uri = client_uri,
+                description = None,
+                logo_uri = None,
+                web_uri = None,
+                namespace = None,
+                )
+                client = self.db.client_fetch_by_id( client_id )
+            
+            #check that the scope unpacks
+            try:
+                log.info("reached inside try ************ " ) 
+                scope = json.loads( 
+                    json_scope.replace( '\r\n','\n' ), 
+                    strict=False 
+                )
+    
+                resource_name = scope[ "resource_name" ]
+                expiry_time = scope[ "expiry_time" ]
+                query = scope[ "query" ] 
+                
+                log.info("processor install request FOR %s" % resource_name)
+              
+            except Exception, e:
+                return self._format_submission_failure(
+                    "invalid_scope", "incorrectly formatted JSON scope" ) 
+            
+         
+            #check that the resource is installed by the user
+            resource = self.db.install_fetch_by_name( 
+                user.user_id,
+                resource_name )
+
+            if not resource:
+                return self._format_submission_failure(
+                    "invalid_request", "User does not have a resource installed by that name"
+                )
+
+            #so far so good. Add the request to the user's database
+            #Note that if the resource the client has requested access to
+            #doesn't exist, the database will throw a foreign key error.
+            log.info("before processor ************ " ) 
+            processor = self.db.processor_insert( 
+                user.user_id,                                    
+                client, 
+                state,
+                resource.resource,
+                expiry_time, 
+                query,
+                Status.PENDING
+            )
+            log.info("after processor ************ " )  
+            
+            return self._format_submission_success() 
+        
+       
+        #otherwise we have wider database problems
+        except:   
+            return self._format_submission_failure(
+                "server_error", "Database problems are currently being experienced"
+            ) 
+        finally: 
+            if not (processor is None):    
+                channel.send_message(user.email, json.dumps(processor.to_dict()))
+            
+    #///////////////////////////////////////////////
     
     def client_authorize( self, user_id, processor_id ):
 
@@ -697,11 +787,15 @@ class AuthorizationModule( object ) :
             to be run on its server. If this fails a RegisterException will
             be thrown that the calling function must handle accordingly.
         """
-        
+        #if request is for experiment there will be no client id associated 
         #build up the required data parameters for the communication
+        if processor.client is not None:
+            client_id = processor.client.client_id
+        else:
+            client_id = None
         data = urllib.urlencode( {
                 'install_token': install.install_token,
-                'client_id': processor.client.client_id,
+                'client_id': client_id,
                 'resource_name': processor.resource.resource_name,
                 'query': processor.query,
                 'expiry_time': int(processor.expiry_time),

@@ -34,6 +34,7 @@ class CatalogClient(DictModel):
     namespace = db.StringProperty()
     registered = db.FloatProperty()
 
+
 class CatalogResource(DictModel):
     """Models the resources managed by this catalog."""
     resource_id = db.StringProperty()
@@ -224,6 +225,7 @@ class CatalogDB():
         
     #///////////////////////////////////////
     
+    
     def client_fetch_by_id( self, client_id ) :
         if not client_id: return None
         
@@ -238,8 +240,20 @@ class CatalogDB():
         
         if not client_name: return None
         
-        q = db.Query(CatalogUser)
+        q = db.Query(CatalogClient)
         q.filter('client_name =', client_name)
+        
+        return q.get()
+        
+                      
+    #////////////////////////////////////////////////////////////////////////////////////////////
+    
+    def client_fetch_by_name_uri( self, client_name, client_uri ) :
+        
+        if not ( client_name or  client_uri): return None
+        
+        q = db.Query(CatalogClient)
+        q.filter('client_name =', client_name).filter('client_uri =', client_uri)
         
         return q.get()
         
