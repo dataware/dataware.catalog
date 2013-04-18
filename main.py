@@ -428,13 +428,13 @@ def client_request_endpoint( user_name = None ):
 #//////////////////////////////////////////////////////////
 
     
-@route( "/user/:user_name/client_experiment_request", method = "POST" )
+@route( "/user/:user_name/client_experiment_request", methods=['GET','POST'] )
 def client_experiment_request_endpoint( user_name = None ):
     log.info("Inside experiment end point **************************")
     #client_id = request.forms.get( "client_id" )
-    state = request.forms.get( "state" )
-    client_uri = request.forms.get( "redirect_uri" )
-    json_scope = request.forms.get( "scope" )
+    state = request.GET[ "state" ]
+    client_uri =  request.GET[ "redirect_uri" ]
+    json_scope = request.GET[ "scope" ]
     log.info("client experiment request endpoint  %s %s" % ( state, client_uri))
     
     result = am.client_experiment_request( 
@@ -449,7 +449,7 @@ def client_experiment_request_endpoint( user_name = None ):
         % (user_name, result ) 
     )
        
-    return result
+    redirect( "/audit" ) 
 
 
     
