@@ -448,8 +448,11 @@ def client_experiment_request_endpoint( user_name = None ):
         "Catalog_server: Client experiment Request from to %s: %s" 
         % (user_name, result ) 
     )
-       
-    redirect( "/audit" ) 
+    url = "/audit?fromPage="+"client"  
+    redirect(url) 
+
+
+
 
 
     
@@ -814,11 +817,18 @@ def user_audit():
     log.debug(processors)
     log.debug(json.dumps([p.to_dict() for p in processors]))
     
+    fromPage = None
+    if request.method == 'GET' and 'fromPage' in request.GET:
+        fromPage = request.GET[ "fromPage" ]
+        print "from page % s" % fromPage
+        
+    
     return template( 
         "audit_page_template", 
         REALM=REALM, 
         user=user, 
         processors=processors,
+        fromPage=fromPage,
         processorjson=(json.dumps([p.to_dict() for p in processors]))
     );
 
