@@ -4,8 +4,8 @@ Created on 12 April 2011
 """
 
 from new import * #@UnusedWildImport
-from google.appengine.api import urlfetch
-from google.appengine.api import channel
+#from google.appengine.api import urlfetch
+#from google.appengine.api import channel
 
 import json
 #import MySQLdb
@@ -553,7 +553,8 @@ class AuthorizationModule( object ) :
             ) 
         finally: 
             if not (processor is None):    
-                channel.send_message(user.email, json.dumps(processor.to_dict()))
+		pass
+                #channel.send_message(user.email, json.dumps(processor.to_dict()))
             
     #///////////////////////////////////////////////
     

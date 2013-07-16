@@ -732,6 +732,15 @@ class CatalogDB( object ):
             return self.cursor.fetchall()
         else:
             return None
-        
-        
-                
+
+    @safety_mysql    
+    def purgedata(self):
+       try:
+            self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_USERS))
+            self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_CLIENTS))
+            self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_RESOURCES))
+            self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_INSTALLS))
+            self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_PROCESSORS))
+            self.commit()
+       except Exception, e:
+            print e 

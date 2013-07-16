@@ -10,8 +10,8 @@ import settings
 
 from framework import bottle
 from framework.bottle import *
-from google.appengine.ext.webapp.util import run_wsgi_app
-from google.appengine.api import channel
+#from google.appengine.ext.webapp.util import run_wsgi_app
+#from google.appengine.api import channel
 
 from os.path import join, dirname
 
@@ -106,13 +106,13 @@ def user_register():
         submission = True;
     except:
         submission = False
-        
+
     if ( submission ): 
+
         #validate the user_name supplied by the user
         try:
             user_name = request.GET[ "user_name" ]
             email = request.GET[ "email" ]
-            
             if ( not _valid_name( user_name ) ):
                 errors[ 'user_name' ] = "Must be 3-64 legal characters"
             else: 
@@ -121,6 +121,7 @@ def user_register():
                     errors[ 'user_name' ] = "That name has already been taken"                    
         except:
             errors[ 'user_name' ] = "You must supply a valid user name"
+
     
         #validate the email address supplied by the user
         try:
@@ -135,22 +136,17 @@ def user_register():
         except:
             errors[ 'email' ] = "You must supply a valid email"
 
-
         #if everything is okay so far, add the data to the database    
         if ( len( errors ) == 0 ):
-            try:
-                log.info("creating channel %s" % user_id)
-               
-                token = channel.create_channel(email)
-                log.info("channel token %s" % token)
-                
-                match = db.user_register( user_id, user_name, email, token) 
-            except Exception, e:
-                return user_error( e )
+	    try:
+  	    	match= db.user_register(user_id, user_name, email)
+	    	db.commit()
+	    except Exception, e:
+		return user_error(e)
 
-            #update the cookie with the new details
+	    #update the cookie with the new details
             _set_authentication_cookie( user_id, user_name )
-            
+              
             #return the user to the user_home page
             redirect( ROOT_PAGE )
     
@@ -188,12 +184,12 @@ def refreshtoken():
         return user_error( e.msg )
     except Exception, e:
         return user_error( e ) 
-    
-    token = channel.create_channel(user.email)
-    log.info("recreated channel token %s" % token)            
-    db.user_update_token(user.user_id, token) 
-    log.info("updated user token");
-    return json.dumps({'token':token});
+    return json.dumps({'token':'none'})
+    #token = channel.create_channel(user.email)
+    #log.info("recreated channel token %s" % token)            
+    #db.user_update_token(user.user_id, token) 
+    #log.info("updated user token");
+    #return json.dumps({'token':token});
     
 @route("/sendmessage", method="POST")
 def sendmessage():
@@ -208,7 +204,7 @@ def sendmessage():
     
     log.info("sending a message!")
     
-    token = channel.send_message(user.email, "hello!!!")
+    #token = channel.send_message(user.email, "hello!!!")
     
     log.info("finshed sending a message!")
 
@@ -642,7 +638,7 @@ def _user_check_login():
             raise LoginException( "We have no record of the id supplied. Resetting." )
         
         #and finally lets check to see if the user has registered their details
-        if ( user.user_name is None):
+        if ( user['user_name'] is None):
             raise RegisterException()
         
         return user
@@ -728,7 +724,7 @@ def user_openid_authenticate():
                     db.user_insert( o.get_user_id() )
                     user_name = None
                 else :
-                    user_name = user.user_name
+                    user_name = user['user_name']
                 
                 _set_authentication_cookie( user_id, user_name  )
                 
@@ -772,7 +768,7 @@ def user_audit():
     except Exception, e:
         return user_error( e )  
     
-    processors = db.processors_fetch( user.user_id )
+    processors = db.processors_fetch( user['user_id'] )
     
     for processor in processors:
         try:
@@ -813,20 +809,59 @@ def _valid_email( str ):
 
 
 #///////////////////////////////////////////////
-      
-db = CatalogDB()
-WEB_PROXY=None
-ROOT_PAGE = "/"
-REALM = settings.REALM
-EXTENSION_COOKIE = "catalog_logged_in"
+if __name__ == '__main__':      
+	CONFIG_FILE = "catalog.cfg"
+	Config = ConfigParser.ConfigParser()
+	Config.read( CONFIG_FILE )
+        serverconfig = dict( Config.items( "server" ) )
+	dbconfig = dict( Config.items( "db" ) )
 
-try:    
-    am = AuthorizationModule.AuthorizationModule( db, WEB_PROXY )
-except Exception, e:
-    log.error( "Authorization Module failure: %s" % ( e, ) )
-    exit()
+	EXTENSION_COOKIE = serverconfig.get( "extension_cookie" )
+	PORT = serverconfig.get("port")
+	REALM = serverconfig.get("realm")
+	ROOT_PAGE = serverconfig.get("root_page")	
+	WEB_PROXY= serverconfig.get("web_proxy")
+        REALM = serverconfig.get("realm")
+
+	if not EXTENSION_COOKIE : EXTENSION_COOKIE = "catalog_logged_in"
+    	if not PORT : PORT = 80
+    	if not ROOT_PAGE : ROOT_PAGE = "/"
+    	if not REALM : REALM = "localhost:%s" % PORT
+    	else : REALM += ":%s" % PORT
+	 
+
+	#----------logging --------------#
+	log = logging.getLogger( 'console_log' )        
+	log.setLevel (logging.DEBUG)
+        ch = logging.StreamHandler(sys.stdout)
+	
+	log.addHandler(ch)
+
+	#sys.stdout = std_writer("stdout")
+	#sys.stderr = std_writer("stderr")
+
+	try:
+		db = CatalogDB(dbconfig)
+        	db.connect()
+		db.check_tables()
+	except Exception, e:
+		log.error("DB init failure %s" % e)
+		exit()
+	try:    
+   		am = AuthorizationModule.AuthorizationModule( db, WEB_PROXY )
+	except Exception, e:
+    		log.error( "Authorization Module failure: %s" % ( e, ) )
+    		exit()
         
-        
-appPath = dirname(__file__)
-app = bottle.default_app()
+        appPath = dirname(__file__)	
+
+	try:
+		debug(True)
+		run (host="0.0.0.0", port=int(PORT), quiet=False)
+	except Exception, e:
+		log.error("Web server exception! " % e)
+		exit()         
+	
+	#app = bottle.default_app()
+	
 

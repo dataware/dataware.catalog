@@ -337,49 +337,7 @@
     dw.catalog = (function(){
         var
             processors = ko.observableArray(),
-            channel = {},
-            socket = {},
             
-            refreshToken = function(){
-            
-                success_callback = function(data, status){
-                    console.log(data);
-                    subscribe(data.token);
-                }
-                
-                dw.ajaxservice.ajaxGetJson('/refreshtoken', null, success_callback); 
-                
-            },
-            
-	        subscribe = function(token){
-	            channel = new goog.appengine.Channel(token);
-	            socket = channel.open();
-	            socket.onopen = function(){console.log("opened channel!")};
-	            socket.onclose = function(){console.log("closed channel!!")};
-	            socket.onerror = function(error){
-	                console.log("REFRESHING TOKEN");
-	                refreshToken();
-	            };
-	            socket.onmessage = function(event){
-	                 console.log(event);
-	                 p = $.parseJSON(event.data);
-	                 console.log(p);
-	                 processors.push(new dw.processor()
-                                    .id(p.id)
-                                    .client(p.client)
-                                    .request_status(p.request_status)
-                                    .query(p.query)
-                                    .created(p.created)
-                                    .expiry_time(p.expiry_time)
-                                    .resource(p.resource)
-                                    .state(p.state)
-                                    .user_id(p.user_id)
-                                    .accesstoken(p.accesstoken)
-                                    .auth_code(p.auth_code)
-                    );
-	            }    
-	        },
-	        
             loadData = function(data){
                 $.each(data, function(i,p){
                     processors.push(new dw.processor()
@@ -402,13 +360,11 @@
         return{
             processors: processors,
             loadData: loadData,
-            subscribe: subscribe
         }    
     })();
 
     $(function(){
         dw.catalog.loadData({{!processorjson}});
-        dw.catalog.subscribe('{{user.channel_token}}');
         ko.applyBindings(dw.catalog);    
     });
     
