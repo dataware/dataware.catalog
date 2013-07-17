@@ -439,9 +439,9 @@ class AuthorizationModule( object ) :
                 web_uri = web_uri,
                 namespace = namespace,
             )
-            
+            self.db.commit()
             log.info("inserted client")
-            #self.db.commit()
+            
 
             json_response = { 
                 'success': True,
@@ -481,7 +481,7 @@ class AuthorizationModule( object ) :
             
             client = self.db.client_fetch_by_id( client_id )
              
-            if ( not client ) or client.client_uri != client_uri  :        
+            if ( not client ) or client['client_uri'] != client_uri  :        
                 return self._format_submission_failure(
                     "unauthorized_client", "A valid client ID/redirect_uri pair has not been provided"
                 ) 
@@ -512,9 +512,11 @@ class AuthorizationModule( object ) :
          
             #check that the resource is installed by the user
             resource = self.db.install_fetch_by_name( 
-                user.user_id,
+                user['user_id'],
                 resource_name )
 
+            log.info("done an install fetch by name , gor resiurce")
+            log.info("%s" % resource);
             
             if not resource:
                 return self._format_submission_failure(
@@ -525,16 +527,19 @@ class AuthorizationModule( object ) :
             #Note that if the resource the client has requested access to
             #doesn't exist, the database will throw a foreign key error.
             
-            processor = self.db.processor_insert( 
-                user.user_id,                                    
-                client, 
+            log.info("ok about to insert processor!")
+            
+            self.db.processor_insert( 
+                user['user_id'],                                    
+                client_id, 
                 state,
-                resource.resource,
+                resource['resource_id'],
                 expiry_time, 
                 query,
                 Status.PENDING
             )
-             
+            
+            log.info("nice - done!!") 
             
             return self._format_submission_success() 
         
@@ -542,11 +547,11 @@ class AuthorizationModule( object ) :
         #otherwise we have wider database problems
         except:   
             return self._format_submission_failure(
-                "server_error", "Database problems are currently being experienced"
+                "server_error", "Hmmm, Database problems are currently being experienced"
             ) 
         finally: 
             if not (processor is None):    
-		pass
+		    pass
                 #channel.send_message(user.email, json.dumps(processor.to_dict()))
             
     #///////////////////////////////////////////////
@@ -602,11 +607,11 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "The processing request you are trying to authorize does not exist." ) 
             
-            if not ( processor.user_id == user_id ) :
+            if not ( processor['user_id'] == user_id ) :
                 return self._format_failure( 
                     "Incorrect user authentication for that processing request." ) 
             
-            if ( not processor.request_status == Status.PENDING ):
+            if ( not processor['request_status'] == Status.PENDING ):
                 return self._format_failure( 
                     "This request has already been authorized." )   
 
@@ -614,7 +619,7 @@ class AuthorizationModule( object ) :
             #get the details about the resource and the targeted user state
             install = self.db.install_fetch_by_id( 
                 user_id, 
-                processor.resource.resource_id 
+                processor['resource_id'] 
             )
             
             if not ( install ) :
@@ -628,11 +633,11 @@ class AuthorizationModule( object ) :
                 #the processing request has been rejected by the resource_provider
                 #so we have to return a failure redirect url and mop up
                 result = self.db.processor_delete( processor_id )
-             #   self.db.commit()
+                self.db.commit()
 
                 return self._format_auth_failure(
-                    processor.client.client_uri,
-                    processor.state,
+                    processor['client_uri'],
+                    processor['state'],
                     e.msg )
             except:
                 return self._format_failure(
@@ -641,14 +646,8 @@ class AuthorizationModule( object ) :
         
             #all is well so register the processing request as having been updated.
             
-            #instead of generating an access code we return the key of the processor entry in the 
-            #datatstore as this will mean that the immediate exchange of an authcode for an
-            #access code will not fail.
-            
-            #auth_code = self._generate_access_code()
-         
-            auth_code = str(processor.key())
-            
+        
+            auth_code = self._generate_access_code()
             log.info("authcode is %s" % auth_code)
             
             result = self.db.processor_update( 
@@ -662,16 +661,15 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "Server is currently experiencing database problems. \
                      Please try again later." )     
-            log.info("result is")
-            log.info(result)     
-            #self.db.commit()
+          
+            self.db.commit()
             
             #the processing request has been accepted so return a success redirect url
             return self._format_auth_success(
-                 processor.client.client_uri,  
-                 processor.state, 
+                 processor['client_uri'],  
+                 processor['state'], 
                  auth_code,
-                 processor.resource.resource_uri
+                 processor['resource_uri']
             )                            
 
         except:
@@ -694,15 +692,15 @@ class AuthorizationModule( object ) :
         
         #build up the required data parameters for the communication
         data = urllib.urlencode( {
-                'install_token': install.install_token,
-                'client_id': processor.client.client_id,
-                'resource_name': processor.resource.resource_name,
-                'query': processor.query,
-                'expiry_time': int(processor.expiry_time),
+                'install_token': install['install_token'],
+                'client_id': processor['client_id'],
+                'resource_name': processor['resource_name'],
+                'query': processor['query'],
+                'expiry_time': int(processor['expiry_time']),
             }
         )
                         
-        url = "%s/permit_processor" % (processor.resource.resource_uri)
+        url = "%s/permit_processor" % (processor['resource_uri'],)
        
         log.info("connect to %s" % url)
         #if necessary setup a proxy
@@ -713,12 +711,11 @@ class AuthorizationModule( object ) :
         
         #first communicate with the resource provider   
         try:
-            result = urlfetch.fetch(url=url,payload=data,method=urlfetch.POST,headers={'Content-type':'application/x-www-form-urlencoded'})
           
-            #req = urllib2.Request( url, data )
-            #response = urllib2.urlopen( req ) #GAE doesn't like this as it calls gethostbyname
-            #output = response.read()
-            output = result.content
+            req = urllib2.Request( url, data )
+            response = urllib2.urlopen( req ) #GAE doesn't like this as it calls gethostbyname
+            output = response.read()
+            
         except urllib2.URLError, e:
             log.info("couldn't connect %s" % e)
             raise PermitException( "Failure - could not contact resource provider (%s)" % e )
@@ -822,7 +819,7 @@ class AuthorizationModule( object ) :
         log.info("got client")
         log.info(client)
         
-        if ( not client ) or client.client_uri != client_uri  :        
+        if ( not client ) or client['client_uri'] != client_uri  :        
            return False
     
         return True            
@@ -857,11 +854,11 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "The processing request you are trying to reject does not exist." ) 
             
-            if not ( processor.user_id == user_id ) :
+            if not ( processor['user_id'] == user_id ) :
                 return self._format_failure( 
                     "Incorrect user authentication for that request." ) 
             
-            if ( not processor.request_status == Status.PENDING ):
+            if ( not processor['request_status'] == Status.PENDING ):
                 return self._format_failure( 
                     "This processing request has already been authorized." )   
             
@@ -872,14 +869,15 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "Server is currently experiencing database problems. Please try again later." )     
 
-            #self.db.commit()
+            self.db.commit()
 
             #the processor has been revoked so build the redirect url that
             #will notify the client via the user's browser
-            log.info("sending something to client to let them know this has been rejected %s" % processor.client.client_uri)
+            log.info("sending something to client to let them know this has been rejected %s" % processor['client_uri'])
+
             return self._format_revoke_success( 
-                processor.client.client_uri,
-                processor.state,
+                processor['client_uri'],
+                processor['state'],
                 "The user denied your processing request."
             )
 
@@ -912,15 +910,15 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "The processing request that you are trying to revoke does not exist." ) 
             
-            if not ( processor.user_id == user_id ) :        
+            if not ( processor['user_id'] == user_id ) :        
                 return self._format_failure( 
                     "Incorrect user authentication for that processing request." ) 
                          
-            if ( not processor.request_status == Status.ACCEPTED ):
+            if ( not processor['request_status'] == Status.ACCEPTED ):
                 return self._format_failure( 
                     "This processing request has not been authorized, and so cannot be revoked." )   
 
-            install = self.db.install_fetch_by_id( user_id, processor.resource.resource_id )
+            install = self.db.install_fetch_by_id( user_id, processor['resource_id'] )
             
             if ( not install ):
                 return self._format_failure( 
@@ -929,7 +927,7 @@ class AuthorizationModule( object ) :
             # contact the resource provider and tell them we have cancelled the
             # request so they should delete it, and its access_token from their records
             try:     
-                self._client_revoke_request( processor, install.install_token)
+                self._client_revoke_request( processor, install['install_token'])
                 
             except RevokeException, e:
                 return self._format_failure(
@@ -946,11 +944,11 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "Server is currently experiencing database problems. Please try again later." )     
 
-            #self.db.commit()
+            self.db.commit()
 
             return self._format_revoke_success( 
-                processor.client.client_uri,
-                processor.state,
+                processor['client_uri'],
+                processor['state'],
                 "The user revoked your processor request."
             )
 
@@ -974,14 +972,14 @@ class AuthorizationModule( object ) :
         #build up the required data parameters for the communication
         data = urllib.urlencode( {
                 'install_token': install_token,
-                'access_token': processor.access_token
+                'access_token': processor['access_token']
             }
         )
 
         log.info("am here %s" % data)
         
         
-        url = "%s/revoke_processor" % ( processor.resource.resource_uri )
+        url = "%s/revoke_processor" % ( processor['resource_uri'] )
 
         log.info("calling url %s" % url)        
 

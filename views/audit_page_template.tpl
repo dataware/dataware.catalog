@@ -92,11 +92,11 @@
             <tr>
                 <td><span data-bind="text:id"></span></td>
                 <td>
-                    <a data-bind="attr:{href:client().client_domain}">
-                        <span data-bind="text:client().client_name"></span>
+                    <a data-bind="attr:{href:client_domain}">
+                        <span data-bind="text:client_name"></span>
                     </a>
                 </td>
-                <td><span data-bind="text:resource().resource_name"></span></td> 
+                <td><span data-bind="text:resource_name"></span></td> 
                 <td><span data-bind="text:request_status"></span></td> 
                 <td><span data-bind="text:expiry_date"></span></td> 
                 <td><code class="brush: python; toolbar: false" data-bind="text:query"></code></td>
@@ -182,12 +182,15 @@
         var self = this;
         
         this.id = ko.observable();
-        this.client = ko.observable();
+        this.client_name = ko.observable();
+        this.client_id = ko.observable();
+        this.client_domain = ko.observable();
         this.request_status = ko.observable("PENDING");
         this.query = ko.observable();
         this.created = ko.observable();
         this.expiry_time = ko.observable();
-        this.resource = ko.observable();
+        this.resource_name = ko.observable();
+        this.resource_id = ko.observable();
         this.state = ko.observable();
         this.user_id = ko.observable();
         this.accesstoken = ko.observable();
@@ -339,15 +342,21 @@
             processors = ko.observableArray(),
             
             loadData = function(data){
+		console.log("loading data " )
+		console.log(data);
+
                 $.each(data, function(i,p){
                     processors.push(new dw.processor()
                                     .id(p.id)
-                                    .client(p.client)
+                                    .client_name(p.client_name)
+                                    .client_id(p.client_id)
+                                    .client_domain("")
                                     .request_status(p.request_status)
                                     .query(p.query)
                                     .created(p.created)
                                     .expiry_time(p.expiry_time)
-                                    .resource(p.resource)
+                                    .resource_name(p.resource_name)
+                                    .resource_id(p.resource_id)
                                     .state(p.state)
                                     .user_id(p.user_id)
                                     .accesstoken(p.accesstoken)

@@ -270,9 +270,9 @@ def resource_request_endpoint():
            error = "Resource isn't registered with us, so cannot install."
         );
    
-    log.info("resource.resource_uri is %s and resource_uri is %s" % (resource['resource_uri'], resource_uri)) 
+    log.info("resource.resource_uri is %s and resource_uri is %s" % (resource.resource_uri, resource_uri)) 
     #And finally check that it has supplied the correct credentials
-    if ( resource['resource_uri'] != resource_uri ):
+    if ( resource.resource_uri != resource_uri ):
         return template( 'resource_request_error_template', 
            error = "The resource has supplied incorrect credentials."
         );
@@ -327,7 +327,7 @@ def resource_authorize_endpoint():
    
     log.debug( 
         "Catalog_server: Resource Authorization Request from %s for %s completed" 
-        % ( user["user_id"], resource_id ) 
+        % ( user.user_id, resource_id ) 
     )
 
     return result
@@ -774,22 +774,22 @@ def user_audit():
     
     for processor in processors:
         try:
-            index = [ m.start() for m in re.finditer( r"\n", processor.query) ][ PREVIEW_ROWS ]
-            processor.preview = "%s\n..." % processor.query[ 0:index ]
+            index = [ m.start() for m in re.finditer( r"\n", processor['query']) ][ PREVIEW_ROWS ]
+            processor['preview'] = "%s\n..." % processor['query'][ 0:index ]
         except:
             log.error('failed to create preview for processor!') 
-            processor.preview = processor.query
+            processor['preview'] = processor['query']
     
     log.debug("creating audit template for processors!");
     log.debug(processors)
-    log.debug(json.dumps([p.to_dict() for p in processors]))
+    log.debug(json.dumps([p for p in processors]))
     
     return template( 
         "audit_page_template", 
         REALM=REALM, 
         user=user, 
         processors=processors,
-        processorjson=(json.dumps([p.to_dict() for p in processors]))
+        processorjson=(json.dumps([p for p in processors]))
     );
 
 @route( "/purge" )

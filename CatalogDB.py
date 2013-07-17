@@ -473,8 +473,46 @@ class CatalogDB( object ):
         self.cursor.execute( query, ( resource_name, namespace) )
         return self.cursor.fetchone()   
     
-    
+    @safety_mysql                
+    def resource_registered( self, catalog_uri, resource_owner=None, resource_name=None):
         
+        log.info("in here and onwer is %s and name is %s", resource_owner, resource_name)
+        
+        query = "SELECT %s.*, %s.resource_name, %s.resource_uri from %s.%s LEFT JOIN %s ON %s.resource_id = %s.resource_id" % (self.TBL_CATALOG_INSTALLS, self.TBL_CATALOG_RESOURCES, self.TBL_CATALOG_RESOURCES, self.DB_NAME, self.TBL_CATALOG_INSTALLS, self.TBL_CATALOG_RESOURCES, self.TBL_CATALOG_INSTALLS, self.TBL_CATALOG_RESOURCES)
+        
+        
+        if resource_name is not None:
+            log.info("filtering on resource name")
+            query = "%s WHERE resource_name = %s" % (query, '%s')
+            self.cursor.execute( query, ( resource_name, ) )
+        else:
+            self.cursor.execute( query )
+        
+        results = self.cursor.fetchall()
+        
+        log.info("got some results for query %s " % query)
+        log.info(results)
+        
+        listing = []
+         
+        for install in results:
+           
+            log.info(install)  
+            qc = "SELECT * from %s.%s WHERE user_id = %s" % (self.DB_NAME, self.TBL_CATALOG_USERS, '%s')
+            
+            if resource_owner is not None:
+                qc = "%s WHERE user_name = %s" % (qc, '%s')
+                self.cursor.execute( qc, ( install['user_id'], resource_owner, ) )
+            else:
+                self.cursor.execute(qc, (install['user_id'],))
+            
+            user = self.cursor.fetchone()
+         
+            if not(user is None):
+                listing.append({'catalog_uri': catalog_uri, 'owner': user['user_name'], 'resource_name':  install['resource_name'], 'resource_uri': install['resource_uri']})
+        
+        log.info(listing)
+        return listing
     #////////////////////////////////////////////////////////////////////////////////////////////
     
     @safety_mysql   
