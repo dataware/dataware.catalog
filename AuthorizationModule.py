@@ -261,15 +261,7 @@ class AuthorizationModule( object ) :
             resource_id = self._generate_access_code()
             log.info("generated access code %s" % resource_id)
             
-            #rather than send back the resource_id, we send back the key of the resource
-            #once this result is sent back to the catalog, it will call /resource_request
-            #which in turn will query the resource using the 'resource_id' sent in the following
-            #response.  Because this happens immediately, in some instances the datastore will
-            #not be able to find the resource when it does a query on resource_id, since the datastore
-            #is 'eventually consistent' - by doing a lookup on the key, rather than resource_id, we 
-            #get round this problem, since requests by key are strongly consistent.
-            
-            key = self.db.resource_insert( 
+            self.db.resource_insert( 
                 resource_id = resource_id,                                    
                 resource_name = resource_name,
                 resource_uri = resource_uri,
@@ -279,12 +271,12 @@ class AuthorizationModule( object ) :
                 namespace = namespace,
             )
 
-            #self.db.commit()
+            self.db.commit()
             
             
             json_response = { 
                 'success': True,
-                'resource_id': str(key)
+                'resource_id': resource_id
             } 
         
             
@@ -302,7 +294,8 @@ class AuthorizationModule( object ) :
     
     
     def resource_authorize( self, user, resource_id, resource_uri, state ):
-       
+        log.info("in RESOURCE AUTHORIZE!");
+ 
         try:   
             if not ( user ) :        
                 return self._format_failure( 
@@ -319,39 +312,39 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "The resource has not been registered, and so cannot be installed." ) 
 
-            if not ( resource.resource_uri == resource_uri ) :
+            if not ( resource["resource_uri"] == resource_uri ) :
                 return self._format_failure( 
                     "Incorrect resource credentials have been supplied." ) 
-
+	   
             #check that the user hasn't already been installed the resource
-            if( self.db.install_fetch_by_id( user.user_id, resource_id ) ):
+            if( self.db.install_fetch_by_id( user["user_id"], resource_id ) ):
                 return self._format_failure( 
                     "You have already installed this resource." ) 
 
+            log.info("am here now!")
             #all is well so create some access_token and authorization codes
             #register the request as having been updated.
             install_token = self._generate_access_code()
             auth_code = self._generate_access_code()
             
-            install = self.db.install_insert( 
-                user.user_id,
-                resource, 
+            log.info("am in here!!")
+            self.db.install_insert( 
+                user["user_id"],
+                resource_id, 
                 state,
                 install_token,
                 auth_code                
             )
+            log.info("and have done an insert!")
+        
+            self.db.commit()
             
-            #self.db.commit()
-            
-            #the request has been accepted so return a success redirect url
-            #we use pass back the key of the install's datastore object
-            #rather than the newly generated auth_code, as eventual consistency
-            #can mean that an immediate lookup on authcode will fail (which happens in
-            #resource_access
+            log.info("and am committed!")
+                
             return self._format_auth_success(
                  "%s/install_complete" % ( resource_uri, ),  
                  state, 
-                 str(install.key())
+                 auth_code
             )                            
 
         except:
@@ -383,7 +376,7 @@ class AuthorizationModule( object ) :
             #to the auth_code that has been supplied (fetch by key rather than
             #by auth_code, which can fail dues to gae's eventual consistency.
             
-            resource = self.db.install_fetch_by_key( auth_code )
+            resource = self.db.install_fetch_by_auth_code( auth_code )
           
             if resource == None :
                 return self._format_access_failure(
@@ -391,19 +384,19 @@ class AuthorizationModule( object ) :
                     "Authorization Code: %s supplied is unrecognized" % auth_code 
                 )  
             
-            if not resource.install_token  :
+            if not resource['install_token']  :
                 return self._format_access_failure(
                     "server_error", 
                     "No access token seems to be available for that code" 
                 )
         
-            return self._format_access_success( resource.install_token ) 
+            return self._format_access_success( resource['install_token'] ) 
         
         #determine if there has been a database error
         except Exception:
             return self._format_access_failure(
                 "server_error", 
-                "An unknown error has occurred" 
+                "An unknown server error has occurred" 
             )   
             
 
@@ -791,18 +784,9 @@ class AuthorizationModule( object ) :
                     "A valid authorization code has not been provided"
                 )  
 
-            #so far so good. Fetch the request that corresponds 
-            #to the auth_code that has been supplied
-    
-            # the authcode is swapped for a token proper during an exchange with a client.  This
-            # happens over a short space of time which can mean, due to the gae datastores 
-            # eventual consistency, that a legitimate auth_code is not found.  Instead we've made 
-            # the authcode the key, as queries on key are strongly consistent.      
-    
-            log.info("getting processor corresponding to auth_code %s" % auth_code)
-            #processor = self.db.processor_fetch_by_auth_code( auth_code )
+           
             
-            processor = self.db.processor_fetch_by_key(auth_code)
+            processor = self.db.processor_fetch_by_auth_code(auth_code)
             log.info("got processor")
             log.info(processor)
             
@@ -818,16 +802,12 @@ class AuthorizationModule( object ) :
                     "No access token seems to be available for that code" 
                 )
             
-            log.info("returning %s" % self._format_access_success( processor.access_token ))
+            log.info("returning %s" % self._format_access_success( processor["access_token"] ))
             
-            return self._format_access_success( processor.access_token ) 
+            return self._format_access_success( processor["access_token"] ) 
             
         #determine if there has been a database error
-        except Exception:
-            log.info("returning %s" % self._format_access_failure(
-                "server_error", 
-                "An unknown error has occurred" 
-            ))     
+        except Exception:   
             return self._format_access_failure(
                 "server_error", 
                 "An unknown error has occurred" 

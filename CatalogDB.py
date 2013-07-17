@@ -38,8 +38,7 @@ def safety_mysql( fn ) :
 
     
 class CatalogDB( object ):
-    
-    DB_NAME = 'catalog'
+    DB_NAME = 'catalog' 
     
     TBL_CATALOG_USERS = 'tblCatalogUsers'
     TBL_CATALOG_CLIENTS = 'tblCatalogClients'
@@ -90,7 +89,7 @@ class CatalogDB( object ):
                 PRIMARY KEY (user_id, resource_id), 
                 FOREIGN KEY (resource_id) REFERENCES %s(resource_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;            
-        """  % ( DB_NAME, TBL_CATALOG_INSTALLS, TBL_CATALOG_RESOURCES ) ),
+        """  % (DB_NAME, TBL_CATALOG_INSTALLS, TBL_CATALOG_RESOURCES ) ),
         
         
         ( TBL_CATALOG_CLIENTS, """
@@ -201,9 +200,11 @@ class CatalogDB( object ):
     
     @safety_mysql        
     def check_tables( self ):
-        
+
+        #self.DB_NAME = self.dbname
+ 
         log.info( "%s: checking system table integrity..." % self.name );
-        
+        log.info( "db name is %s or %s" % (self.dbname, self.DB_NAME))  
         #-- first check that the database itself exists        
         self.cursor.execute ( """
             SELECT 1
@@ -213,7 +214,7 @@ class CatalogDB( object ):
         row = self.cursor.fetchone()
         if ( row is None ):
             log.info( "%s: database does not exist - creating..." % self.name );    
-            self.cursor.execute ( "CREATE DATABASE catalog" )
+            self.cursor.execute ( "CREATE DATABASE catalog")
         
         #then check it is populated with the required tables
         self.cursor.execute ( """
@@ -227,7 +228,7 @@ class CatalogDB( object ):
         for item in self.createQueries:
             if not item[ 0 ].lower() in tables : 
                 log.warning( "%s: Creating missing system table: '%s'" % ( self.name, item[ 0 ] ) );
-                self.cursor.execute( item[ 1 ] )
+                self.cursor.execute( item[ 1 ])
         
         self.commit()
         
@@ -462,14 +463,14 @@ class CatalogDB( object ):
 
 
     @safety_mysql                
-    def resource_fetch_by_name( self, resource_name ) :
+    def resource_fetch_by_name( self, resource_name, namespace ) :
         
         if not resource_name: return None
         
-        query = "SELECT * FROM %s.%s WHERE resource_name = %s" % \
-            ( self.DB_NAME, self.TBL_CATALOG_RESOURCES, '%s', )
+        query = "SELECT * FROM %s.%s WHERE resource_name = %s AND namespace = %s" % \
+            ( self.DB_NAME, self.TBL_CATALOG_RESOURCES, '%s', '%s', )
             
-        self.cursor.execute( query, ( resource_name, ) )
+        self.cursor.execute( query, ( resource_name, namespace) )
         return self.cursor.fetchone()   
     
     
@@ -736,10 +737,13 @@ class CatalogDB( object ):
     @safety_mysql    
     def purgedata(self):
        try:
+	    log.info("PURGING DATA!")
+	    log.info("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_USERS))
+            self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_INSTALLS))
             self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_USERS))
             self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_CLIENTS))
             self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_RESOURCES))
-            self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_INSTALLS))
+            
             self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_PROCESSORS))
             self.commit()
        except Exception, e:

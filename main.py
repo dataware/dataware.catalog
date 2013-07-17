@@ -219,6 +219,8 @@ def resource_register_endpoint():
     web_uri = request.forms.get( "web_uri" )
     namespace = request.forms.get( "namespace" )
     
+    log.debug("name space is %s" % namespace)
+    
     result = am.resource_register( 
         resource_name = resource_name,
         resource_uri = resource_uri,
@@ -261,16 +263,16 @@ def resource_request_endpoint():
     
     log.info("fetching resource by key %s" % resource_id)
     
-    resource = db.resource_fetch_by_key( resource_id ) 
+    resource = db.resource_fetch_by_id( resource_id ) 
     
     if ( not resource ):
         return template( 'resource_request_error_template', 
            error = "Resource isn't registered with us, so cannot install."
         );
    
-    log.info("resource.resource_uri is %s and resource_uri is %s" % (resource.resource_uri, resource_uri)) 
+    log.info("resource.resource_uri is %s and resource_uri is %s" % (resource['resource_uri'], resource_uri)) 
     #And finally check that it has supplied the correct credentials
-    if ( resource.resource_uri != resource_uri ):
+    if ( resource['resource_uri'] != resource_uri ):
         return template( 'resource_request_error_template', 
            error = "The resource has supplied incorrect credentials."
         );
@@ -325,7 +327,7 @@ def resource_authorize_endpoint():
    
     log.debug( 
         "Catalog_server: Resource Authorization Request from %s for %s completed" 
-        % ( user.user_id, resource_id ) 
+        % ( user["user_id"], resource_id ) 
     )
 
     return result
