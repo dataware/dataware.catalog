@@ -246,6 +246,8 @@
                 error_box( "Unable to contact server at this time. Please try again later." );
             };
             
+            console.log("AUTHORIZING AND ID IS " + self.id());
+            
             dw.ajaxservice.ajaxPostJson(
                                         '/client_authorize', 
                                         {'processor_id':self.id}, 
@@ -347,7 +349,7 @@
 
                 $.each(data, function(i,p){
                     processors.push(new dw.processor()
-                                    .id(p.id)
+                                    .id(p.processor_id)
                                     .client_name(p.client_name)
                                     .client_id(p.client_id)
                                     .client_domain("")
@@ -363,7 +365,7 @@
                                     .auth_code(p.auth_code)
                                     );
                 });
-                console.log(processors);
+                console.log(processors());
             }
             
         return{

@@ -261,7 +261,7 @@ def resource_request_endpoint():
     #is eventually consistent. fetch the object by its key is
     #strongly consistent.
     
-    log.info("fetching resource by key %s" % resource_id)
+    log.info("fetching resource by id %s" % resource_id)
     
     resource = db.resource_fetch_by_id( resource_id ) 
     
@@ -270,9 +270,9 @@ def resource_request_endpoint():
            error = "Resource isn't registered with us, so cannot install."
         );
    
-    log.info("resource.resource_uri is %s and resource_uri is %s" % (resource.resource_uri, resource_uri)) 
+    log.info("resource.resource_uri is %s and resource_uri is %s" % (resource['resource_uri'], resource_uri)) 
     #And finally check that it has supplied the correct credentials
-    if ( resource.resource_uri != resource_uri ):
+    if ( resource['resource_uri'] != resource_uri ):
         return template( 'resource_request_error_template', 
            error = "The resource has supplied incorrect credentials."
         );
@@ -318,6 +318,10 @@ def resource_authorize_endpoint():
     resource_uri = request.forms.get( "redirect_uri" )
     state = request.forms.get( "state" )  
     
+    log.info("resource id is %s" % resource_id)
+    log.info("resource uri us %s" % resource_uri)
+    log.info("state is " % state)
+    
     result = am.resource_authorize( 
         user,
         resource_id = resource_id,
@@ -327,7 +331,7 @@ def resource_authorize_endpoint():
    
     log.debug( 
         "Catalog_server: Resource Authorization Request from %s for %s completed" 
-        % ( user.user_id, resource_id ) 
+        % ( user['user_id'], resource_id ) 
     )
 
     return result
@@ -363,7 +367,7 @@ def resource_details(resource, user):
     resource =  db.resource_fetch_by_user(resource,user)
     log.debug("got here..")
     if resource is not None:
-	return json.dumps(resource.to_dict())
+	    return json.dumps(resource)
     return "nowt!"
 
 @route( "/client_register", method = "POST" )
@@ -449,14 +453,16 @@ def client_authorize_endpoint():
     
     processor_id = request.forms.get( 'processor_id' )
 
+    log.info("processor id is %s" % processor_id)
+    
     result = am.client_authorize( 
-        user_id = user.user_id,
+        user_id = user['user_id'],
         processor_id = processor_id,
     )
     
     log.debug( 
         "Catalog_server: Authorization Request from %s for request %s completed" 
-        % ( user.user_id, processor_id ) 
+        % ( user['user_id'], processor_id ) 
     )
 
     return result
@@ -480,13 +486,13 @@ def client_reject_endpoint():
     processor_id = request.forms.get( 'processor_id' )
     
     result = am.client_reject( 
-        user_id =  user.user_id,
+        user_id =  user['user_id'],
         processor_id = processor_id,
     )
 
     log.debug( 
         "Catalog_server: Request rejection from %s for request %s" 
-        % ( user.user_id, processor_id ) 
+        % ( user['user_id'], processor_id ) 
     )
 
     return result
@@ -551,13 +557,13 @@ def client_revoke_enpdpoint():
     processor_id = request.forms.get( "processor_id" )
 
     result = am.client_revoke( 
-        user_id =  user.user_id,
+        user_id =  user['user_id'],
         processor_id = processor_id,
     )
 
     log.debug( 
         "Catalog_server: Request %s has been successfully revoked by %s" \
-         % ( processor_id,  user.user_id) 
+         % ( processor_id,  user['user_id']) 
     )
     
     return result

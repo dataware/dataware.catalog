@@ -793,7 +793,7 @@ class AuthorizationModule( object ) :
                     "Client - Authorization Code supplied is unrecognized" 
                 )  
             
-            if not processor.access_token :
+            if not processor['access_token'] :
                 return self._format_access_failure(
                     "server_error", 
                     "No access token seems to be available for that code" 
