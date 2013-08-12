@@ -6,12 +6,8 @@ from CatalogDB import *
 import logging
 import AuthorizationModule
 import wsgiref.util
-import settings
-
 from framework import bottle
 from framework.bottle import *
-from google.appengine.ext.webapp.util import run_wsgi_app
-from google.appengine.api import channel
 
 from os.path import join, dirname
 
@@ -106,13 +102,13 @@ def user_register():
         submission = True;
     except:
         submission = False
-        
+
     if ( submission ): 
+
         #validate the user_name supplied by the user
         try:
             user_name = request.GET[ "user_name" ]
             email = request.GET[ "email" ]
-            
             if ( not _valid_name( user_name ) ):
                 errors[ 'user_name' ] = "Must be 3-64 legal characters"
             else: 
@@ -121,6 +117,7 @@ def user_register():
                     errors[ 'user_name' ] = "That name has already been taken"                    
         except:
             errors[ 'user_name' ] = "You must supply a valid user name"
+
     
         #validate the email address supplied by the user
         try:
@@ -135,22 +132,17 @@ def user_register():
         except:
             errors[ 'email' ] = "You must supply a valid email"
 
-
         #if everything is okay so far, add the data to the database    
         if ( len( errors ) == 0 ):
-            try:
-                log.info("creating channel %s" % user_id)
-               
-                token = channel.create_channel(email)
-                log.info("channel token %s" % token)
-                
-                match = db.user_register( user_id, user_name, email, token) 
-            except Exception, e:
-                return user_error( e )
+	    try:
+  	    	match= db.user_register(user_id, user_name, email)
+	    	db.commit()
+	    except Exception, e:
+		return user_error(e)
 
-            #update the cookie with the new details
+	    #update the cookie with the new details
             _set_authentication_cookie( user_id, user_name )
-            
+              
             #return the user to the user_home page
             redirect( ROOT_PAGE )
     
@@ -188,12 +180,12 @@ def refreshtoken():
         return user_error( e.msg )
     except Exception, e:
         return user_error( e ) 
-    
-    token = channel.create_channel(user.email)
-    log.info("recreated channel token %s" % token)            
-    db.user_update_token(user.user_id, token) 
-    log.info("updated user token");
-    return json.dumps({'token':token});
+    return json.dumps({'token':'none'})
+    #token = channel.create_channel(user.email)
+    #log.info("recreated channel token %s" % token)            
+    #db.user_update_token(user.user_id, token) 
+    #log.info("updated user token");
+    #return json.dumps({'token':token});
     
 @route("/sendmessage", method="POST")
 def sendmessage():
@@ -208,7 +200,7 @@ def sendmessage():
     
     log.info("sending a message!")
     
-    token = channel.send_message(user.email, "hello!!!")
+    #token = channel.send_message(user.email, "hello!!!")
     
     log.info("finshed sending a message!")
 
@@ -222,6 +214,8 @@ def resource_register_endpoint():
     logo_uri = request.forms.get( "logo_uri" )
     web_uri = request.forms.get( "web_uri" )
     namespace = request.forms.get( "namespace" )
+    
+    log.debug("name space is %s" % namespace)
     
     result = am.resource_register( 
         resource_name = resource_name,
@@ -263,18 +257,18 @@ def resource_request_endpoint():
     #is eventually consistent. fetch the object by its key is
     #strongly consistent.
     
-    log.info("fetching resource by key %s" % resource_id)
+    log.info("fetching resource by id %s" % resource_id)
     
-    resource = db.resource_fetch_by_key( resource_id ) 
+    resource = db.resource_fetch_by_id( resource_id ) 
     
     if ( not resource ):
         return template( 'resource_request_error_template', 
            error = "Resource isn't registered with us, so cannot install."
         );
    
-    log.info("resource.resource_uri is %s and resource_uri is %s" % (resource.resource_uri, resource_uri)) 
+    log.info("resource.resource_uri is %s and resource_uri is %s" % (resource['resource_uri'], resource_uri)) 
     #And finally check that it has supplied the correct credentials
-    if ( resource.resource_uri != resource_uri ):
+    if ( resource['resource_uri'] != resource_uri ):
         return template( 'resource_request_error_template', 
            error = "The resource has supplied incorrect credentials."
         );
@@ -320,6 +314,10 @@ def resource_authorize_endpoint():
     resource_uri = request.forms.get( "redirect_uri" )
     state = request.forms.get( "state" )  
     
+    log.info("resource id is %s" % resource_id)
+    log.info("resource uri us %s" % resource_uri)
+    log.info("state is %s " % state)
+    
     result = am.resource_authorize( 
         user,
         resource_id = resource_id,
@@ -329,7 +327,7 @@ def resource_authorize_endpoint():
    
     log.debug( 
         "Catalog_server: Resource Authorization Request from %s for %s completed" 
-        % ( user.user_id, resource_id ) 
+        % ( user['user_id'], resource_id ) 
     )
 
     return result
@@ -365,7 +363,7 @@ def resource_details(resource, user):
     resource =  db.resource_fetch_by_user(resource,user)
     log.debug("got here..")
     if resource is not None:
-	return json.dumps(resource.to_dict())
+	    return json.dumps(resource)
     return "nowt!"
 
 @route( "/client_register", method = "POST" )
@@ -482,14 +480,16 @@ def client_authorize_endpoint():
     
     processor_id = request.forms.get( 'processor_id' )
 
+    log.info("processor id is %s" % processor_id)
+    
     result = am.client_authorize( 
-        user_id = user.user_id,
+        user_id = user['user_id'],
         processor_id = processor_id,
     )
     
     log.debug( 
         "Catalog_server: Authorization Request from %s for request %s completed" 
-        % ( user.user_id, processor_id ) 
+        % ( user['user_id'], processor_id ) 
     )
 
     return result
@@ -513,13 +513,13 @@ def client_reject_endpoint():
     processor_id = request.forms.get( 'processor_id' )
     
     result = am.client_reject( 
-        user_id =  user.user_id,
+        user_id =  user['user_id'],
         processor_id = processor_id,
     )
 
     log.debug( 
         "Catalog_server: Request rejection from %s for request %s" 
-        % ( user.user_id, processor_id ) 
+        % ( user['user_id'], processor_id ) 
     )
 
     return result
@@ -584,13 +584,13 @@ def client_revoke_enpdpoint():
     processor_id = request.forms.get( "processor_id" )
 
     result = am.client_revoke( 
-        user_id =  user.user_id,
+        user_id =  user['user_id'],
         processor_id = processor_id,
     )
 
     log.debug( 
         "Catalog_server: Request %s has been successfully revoked by %s" \
-         % ( processor_id,  user.user_id) 
+         % ( processor_id,  user['user_id']) 
     )
     
     return result
@@ -673,7 +673,7 @@ def _user_check_login():
             raise LoginException( "We have no record of the id supplied. Resetting." )
         
         #and finally lets check to see if the user has registered their details
-        if ( user.user_name is None):
+        if ( user['user_name'] is None):
             raise RegisterException()
         
         return user
@@ -759,7 +759,7 @@ def user_openid_authenticate():
                     db.user_insert( o.get_user_id() )
                     user_name = None
                 else :
-                    user_name = user.user_name
+                    user_name = user['user_name']
                 
                 _set_authentication_cookie( user_id, user_name  )
                 
@@ -803,19 +803,19 @@ def user_audit():
     except Exception, e:
         return user_error( e )  
     
-    processors = db.processors_fetch( user.user_id )
+    processors = db.processors_fetch( user['user_id'] )
     
     for processor in processors:
         try:
-            index = [ m.start() for m in re.finditer( r"\n", processor.query) ][ PREVIEW_ROWS ]
-            processor.preview = "%s\n..." % processor.query[ 0:index ]
+            index = [ m.start() for m in re.finditer( r"\n", processor['query']) ][ PREVIEW_ROWS ]
+            processor['preview'] = "%s\n..." % processor['query'][ 0:index ]
         except:
             log.error('failed to create preview for processor!') 
-            processor.preview = processor.query
+            processor['preview'] = processor['query']
     
     log.debug("creating audit template for processors!");
     log.debug(processors)
-    log.debug(json.dumps([p.to_dict() for p in processors]))
+    log.debug(json.dumps([p for p in processors]))
     
     fromPage = None
     if request.method == 'GET' and 'fromPage' in request.GET:
@@ -829,7 +829,7 @@ def user_audit():
         user=user, 
         processors=processors,
         fromPage=fromPage,
-        processorjson=(json.dumps([p.to_dict() for p in processors]))
+        processorjson=(json.dumps([p for p in processors]))
     );
 
 @route( "/purge" )
@@ -851,20 +851,59 @@ def _valid_email( str ):
 
 
 #///////////////////////////////////////////////
-      
-db = CatalogDB()
-WEB_PROXY=None
-ROOT_PAGE = "/"
-REALM = settings.REALM
-EXTENSION_COOKIE = "catalog_logged_in"
+if __name__ == '__main__':      
+	CONFIG_FILE = "catalog.cfg"
+	Config = ConfigParser.ConfigParser()
+	Config.read( CONFIG_FILE )
+        serverconfig = dict( Config.items( "server" ) )
+	dbconfig = dict( Config.items( "db" ) )
 
-try:    
-    am = AuthorizationModule.AuthorizationModule( db, WEB_PROXY )
-except Exception, e:
-    log.error( "Authorization Module failure: %s" % ( e, ) )
-    exit()
+	EXTENSION_COOKIE = serverconfig.get( "extension_cookie" )
+	PORT = serverconfig.get("port")
+	REALM = serverconfig.get("realm")
+	ROOT_PAGE = serverconfig.get("root_page")	
+	WEB_PROXY= serverconfig.get("web_proxy")
+        REALM = serverconfig.get("realm")
+
+	if not EXTENSION_COOKIE : EXTENSION_COOKIE = "catalog_logged_in"
+    	if not PORT : PORT = 80
+    	if not ROOT_PAGE : ROOT_PAGE = "/"
+    	if not REALM : REALM = "localhost:%s" % PORT
+    	else : REALM += ":%s" % PORT
+	 
+
+	#----------logging --------------#
+	log = logging.getLogger( 'console_log' )        
+	log.setLevel (logging.DEBUG)
+        ch = logging.StreamHandler(sys.stdout)
+	
+	log.addHandler(ch)
+
+	#sys.stdout = std_writer("stdout")
+	#sys.stderr = std_writer("stderr")
+
+	try:
+		db = CatalogDB(dbconfig)
+        	db.connect()
+		db.check_tables()
+	except Exception, e:
+		log.error("DB init failure %s" % e)
+		exit()
+	try:    
+   		am = AuthorizationModule.AuthorizationModule( db, WEB_PROXY )
+	except Exception, e:
+    		log.error( "Authorization Module failure: %s" % ( e, ) )
+    		exit()
         
-        
-appPath = dirname(__file__)
-app = bottle.default_app()
+        appPath = dirname(__file__)	
+
+	try:
+		debug(True)
+		run (host="0.0.0.0", port=int(PORT), quiet=False)
+	except Exception, e:
+		log.error("Web server exception! " % e)
+		exit()         
+	
+	#app = bottle.default_app()
+	
 

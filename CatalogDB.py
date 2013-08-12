@@ -1,88 +1,243 @@
+'''    
+Created on 12 April 2011
+@author: jog
+'''
+
+import MySQLdb
 import ConfigParser
 import hashlib
 import logging
 import time
-import urlparse
-from google.appengine.ext import db
-
 log = logging.getLogger( "console_log" )
 
-class DictModel(db.Model):
-    def to_dict(self):  
-        mydict = dict([(p,unicode(getattr(self, p)) if (not isinstance(getattr(self, p),db.Model)) else getattr(self, p).to_dict()) for p in self.properties()])
-        mydict.update({'id':self.key().id()})
-        return mydict
-        
-class CatalogUser(DictModel):
-    """Models a user of the dataware Catalog."""
-    user_id = db.StringProperty()
-    content = db.StringProperty()            
-    user_name = db.StringProperty()
-    email   =   db.StringProperty() 
-    channel_token = db.StringProperty()       
-    registered = db.FloatProperty()
+
+#///////////////////////////////////////
+
+
+def safety_mysql( fn ) :
+    """ I have included this decorator because there are no 
+    guarantees the user has mySQL setup so that it won't time out. 
+    If it does time out, this function remedies it, by trying a
+    (one shot) attempt to reconnect the database.
+    """
+
+    def wrapper( self, *args, **kwargs ) :
+        try:
+            return fn( self, *args, **kwargs )
+        except MySQLdb.Error, e:
+            if e[ 0 ] == 2006:
+                self.reconnect()
+                return fn( self, *args, **kwargs )
+            else:
+                raise e 
+
+    return wrapper
     
-class CatalogClient(DictModel):
-    """Models a third party client registered with the dataware Catalog."""
-    client_id = db.StringProperty()
-    client_name = db.StringProperty()
-    client_uri = db.StringProperty()
-    client_domain = db.StringProperty()
-    description = db.StringProperty(multiline=True)
-    logo_uri = db.StringProperty()
-    web_uri = db.StringProperty()
-    namespace = db.StringProperty()
-    registered = db.FloatProperty()
+#///////////////////////////////////////
 
-
-class CatalogResource(DictModel):
-    """Models the resources managed by this catalog."""
-    resource_id = db.StringProperty()
-    resource_name = db.StringProperty()
-    resource_uri = db.StringProperty()
-    description = db.StringProperty()
-    logo_uri = db.StringProperty()
-    web_uri = db.StringProperty()
-    namespace  = db.StringProperty()
-    registered = db.FloatProperty()
-
-#attributes of a reference property are not indexable, so this table is denormalized 
-#to help query on resource_name and resource_id
-class CatalogInstall(DictModel):
-    user_id = db.StringProperty()
-    resource_name = db.StringProperty() 
-    resource_id = db.StringProperty() 
-    resource = db.ReferenceProperty(CatalogResource)
-    state = db.StringProperty()
-    install_token = db.StringProperty()
-    auth_code = db.StringProperty()
-    created = db.FloatProperty()
-    ctime = db.FloatProperty()
-
-class CatalogProcessor(DictModel):
-    user_id = db.StringProperty()
-    client = db.ReferenceProperty(CatalogClient)
-    state = db.StringProperty()
-    resource = db.ReferenceProperty(CatalogResource)
-    expiry_time = db.FloatProperty()
-    query = db.TextProperty()
-    checksum  = db.StringProperty()
-    request_status = db.StringProperty()
-    access_token = db.StringProperty()
-    auth_code = db.StringProperty()
-    created = db.FloatProperty()
-    ctime = db.FloatProperty()   
-   
     
-class CatalogDB():
+class CatalogDB( object ):
+    DB_NAME = 'catalog' 
+    
+    TBL_CATALOG_USERS = 'tblCatalogUsers'
+    TBL_CATALOG_CLIENTS = 'tblCatalogClients'
+    TBL_CATALOG_RESOURCES = 'tblCatalogResources'
+    TBL_CATALOG_INSTALLS = 'tblCatalogInstalls'    
+    TBL_CATALOG_PROCESSORS = 'tblCatalogProcessors'
         
-    def __init__(self):
+    #///////////////////////////////////////
+      
+    createQueries = [ 
+               
+        ( TBL_CATALOG_USERS, """
+            CREATE TABLE %s.%s (
+                user_id varchar(256) NOT NULL,
+                user_name varchar(64),
+                email varchar(256),
+                registered int(10) unsigned,            
+                PRIMARY KEY (user_id), UNIQUE KEY `UNIQUE` (`user_name`) 
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+        """  % ( DB_NAME, TBL_CATALOG_USERS ) ),
+                
+        
+        ( TBL_CATALOG_RESOURCES, """
+            CREATE TABLE %s.%s (
+                resource_id varchar(256) NOT NULL,
+                resource_name varchar(128) NOT NULL,
+                resource_uri varchar(256) DEFAULT NULL,
+                description varchar(1024) DEFAULT NULL,
+                logo_uri varchar(256) DEFAULT NULL,
+                web_uri varchar(256) DEFAULT NULL,
+                namespace varchar(45) DEFAULT NULL,
+                registered int(10) unsigned NOT NULL, 
+                PRIMARY KEY (resource_id),
+                UNIQUE KEY `UNIQUE` (resource_name) 
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+        """  % ( DB_NAME, TBL_CATALOG_RESOURCES) ), 
+
+
+        ( TBL_CATALOG_INSTALLS, """
+            CREATE TABLE %s.%s (
+                user_id varchar(256) NOT NULL,
+                resource_id varchar(256) NOT NULL,
+                state varchar(256),
+                install_token varchar(256),
+                auth_code varchar(256),
+                created int(10) unsigned,
+                ctime int(10) unsigned,     
+                PRIMARY KEY (user_id, resource_id), 
+                FOREIGN KEY (resource_id) REFERENCES %s(resource_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;            
+        """  % (DB_NAME, TBL_CATALOG_INSTALLS, TBL_CATALOG_RESOURCES ) ),
+        
+        
+        ( TBL_CATALOG_CLIENTS, """
+            CREATE TABLE %s.%s (
+                client_id varchar(256) NOT NULL,
+                client_name varchar(128) NOT NULL,
+                client_uri varchar(256) DEFAULT NULL,
+                description varchar(1024) DEFAULT NULL,
+                logo_uri varchar(256) DEFAULT NULL,
+                web_uri varchar(256) DEFAULT NULL,
+                namespace varchar(45) DEFAULT NULL,
+                registered int(10) unsigned NOT NULL, 
+                PRIMARY KEY (client_id),
+                UNIQUE KEY `UNIQUE` (client_name) 
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+        """  % ( DB_NAME, TBL_CATALOG_CLIENTS) ),  
+        
+        
+        ( TBL_CATALOG_PROCESSORS, """
+            CREATE TABLE %s.%s (
+                processor_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+                user_id varchar(256) NOT NULL,
+                client_id varchar(256) NOT NULL,
+                state varchar(256),
+                resource_id varchar(256) NOT NULL,         
+                expiry_time int(10) unsigned NOT NULL,
+                query text NOT NULL,
+                checksum varchar(256) NOT NULL,
+                request_status varchar(32) NOT NULL,
+                access_token varchar(256),
+                auth_code varchar(256),
+                created int(10) unsigned,
+                ctime int(10) unsigned,     
+                PRIMARY KEY (processor_id),
+                UNIQUE KEY `UNIQUE` (user_id, client_id, checksum), 
+                FOREIGN KEY (user_id, resource_id) REFERENCES %s(user_id, resource_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+        """  % ( DB_NAME, TBL_CATALOG_PROCESSORS, TBL_CATALOG_INSTALLS ) ),      
+    ]
+        
+    #///////////////////////////////////////
+    
+    
+    def __init__( self, dbconfig ):
+            
+        #MysqlDb is not thread safe, so program may run more
+        #than one connection. As such naming them is useful.
         self.name = "CatalogDB"
+        try:
+            self.hostname = dbconfig[ "hostname" ] 
+            self.username = dbconfig[ "username" ]
+            self.password = dbconfig[ "password" ]
+            self.dbname = dbconfig[ "dbname" ]
+            self.connected = False;
+        except:
+            raise Exception( "Insufficient config parameters")
+        
+    #///////////////////////////////////////
+    
+
+    def connect( self ):
+        
+        log.info( "%s: connecting to mysql database..." % self.name )
+        
+        self.conn = MySQLdb.connect( 
+            host=self.hostname,
+            user=self.username,
+            passwd=self.password,
+            db=self.dbname
+        )
+ 
+        self.cursor = self.conn.cursor( MySQLdb.cursors.DictCursor )
+        self.connected = True
+                    
+                    
+    #///////////////////////////////////////
+    
+    
+    def reconnect( self ):
+        
+        log.info( "%s: Database reconnection process activated..." % self.name );
+        self.close()
+        self.connect()
+        
+
+    #///////////////////////////////////////
+          
+          
+    @safety_mysql                
+    def commit( self ) : 
+        
+        self.conn.commit();
+        
+        
+    #///////////////////////////////////////
+        
+
+    def close( self ) :   
+        
+        if self.conn.open:
+            log.info( "%s: disconnecting from mysql database..." % self.name );
+            self.cursor.close();
+            self.conn.close()
+                     
+   
+    #///////////////////////////////////////
+    
+    
+    @safety_mysql        
+    def check_tables( self ):
+
+        #self.DB_NAME = self.dbname
+ 
+        log.info( "%s: checking system table integrity..." % self.name );
+        log.info( "db name is %s or %s" % (self.dbname, self.DB_NAME))  
+        #-- first check that the database itself exists        
+        self.cursor.execute ( """
+            SELECT 1
+            FROM information_schema.`SCHEMATA`
+            WHERE schema_name='%s' """ % self.DB_NAME )
+                
+        row = self.cursor.fetchone()
+        if ( row is None ):
+            log.info( "%s: database does not exist - creating..." % self.name );    
+            self.cursor.execute ( "CREATE DATABASE catalog")
+        
+        #then check it is populated with the required tables
+        self.cursor.execute ( """
+            SELECT table_name
+            FROM information_schema.`TABLES`
+            WHERE table_schema='%s' """ % self.DB_NAME )
+        
+        tables = [ row[ "table_name" ].lower() for row in self.cursor.fetchall() ]
+        
+        #if they don't exist for some reason, create them.    
+        for item in self.createQueries:
+            if not item[ 0 ].lower() in tables : 
+                log.warning( "%s: Creating missing system table: '%s'" % ( self.name, item[ 0 ] ) );
+                self.cursor.execute( item[ 1 ])
+        
+        self.commit()
+        
         
     #////////////////////////////////////////////////////////////////////////////////////////////
     # CATALOG SPECIFIC CALLS
     #////////////////////////////////////////////////////////////////////////////////////////////
-    
+
+
+    @safety_mysql                
     def user_insert( self, user_id ):
         
         if user_id:
@@ -92,8 +247,13 @@ class CatalogDB():
                 % ( self.name, "user_insert", user_id ) 
             );
             
-            user = CatalogUser(user_id=user_id)
-            user.put()
+            query = """
+                INSERT INTO %s.%s 
+                ( user_id, user_name, email, registered ) 
+                VALUES ( %s, null, null, null )
+            """  % ( self.DB_NAME, self.TBL_CATALOG_USERS, '%s' ) 
+
+            self.cursor.execute( query, ( user_id ) )
             return True;
         
         else:
@@ -106,8 +266,9 @@ class CatalogDB():
  
     #///////////////////////////////////////
     
-                    
-    def user_register( self, user_id, user_name, email, token ):
+    
+    @safety_mysql                    
+    def user_register( self, user_id, user_name, email ):
             
         if ( user_id and user_name and email ):
             
@@ -116,14 +277,13 @@ class CatalogDB():
                 % ( self.name, "user_register", user_id ) 
             );
             
-            q = db.Query(CatalogUser)
-            q.filter('user_id =', user_id)
-            user = q.get()
-            user.user_name = user_name
-            user.email = email
-            user.channel_token = token
-            user.registered = time.time()
-            user.put()
+            query = """
+                UPDATE %s.%s 
+                SET user_name = %s, email = %s, registered= %s 
+                WHERE user_id = %s
+            """  % ( self.DB_NAME, self.TBL_CATALOG_USERS, '%s', '%s', '%s', '%s' ) 
+
+            self.cursor.execute( query, ( user_name, email, time.time(), user_id ) )
             return True;
         
         else:
@@ -135,15 +295,19 @@ class CatalogDB():
         
                   
     #///////////////////////////////////////
-              
+
+
+    @safety_mysql                
     def user_fetch_by_id( self, user_id ) :
 
         if user_id :
-           
-            q = db.Query(CatalogUser)
-            q.filter('user_id =', user_id)
-            row = q.get()
-    
+            query = """
+                SELECT * FROM %s.%s t where user_id = %s 
+            """  % ( self.DB_NAME, self.TBL_CATALOG_USERS, '%s' ) 
+        
+            self.cursor.execute( query, ( user_id, ) )
+            row = self.cursor.fetchone()
+
             if not row is None:
                 return row
             else :
@@ -154,12 +318,18 @@ class CatalogDB():
        
         
     #///////////////////////////////////////
-    
+
+
+    @safety_mysql                
     def user_fetch_by_name( self, user_name ) :
+
         if user_name :
-            q = db.Query(CatalogUser)
-            q.filter('user_name =', user_name)
-            row = q.get()
+            query = """
+                SELECT * FROM %s.%s t where user_name = %s 
+            """  % ( self.DB_NAME, self.TBL_CATALOG_USERS, '%s' ) 
+        
+            self.cursor.execute( query, ( user_name, ) )
+            row = self.cursor.fetchone()
 
             if not row is None:
                 return row
@@ -170,272 +340,349 @@ class CatalogDB():
             
             
     #///////////////////////////////////////
-              
+
+
+    @safety_mysql                
     def user_fetch_by_email( self, email ) :
 
         if email :
-            q = db.Query(CatalogUser)
-            q.filter('email =', email)
-            row = q.get()
-
+            query = """
+                SELECT * FROM %s.%s t where email = %s 
+            """  % ( self.DB_NAME, self.TBL_CATALOG_USERS, '%s' ) 
+        
+            self.cursor.execute( query, ( email, ) )
+            row = self.cursor.fetchone()
             if not row is None:
                 return row
             else :
-                return None
+                return None    
         else :
             return None    
-    
-    def user_update_token(self, user_id, token):
-        if user_id :
-            log.info("updating user")
-            log.info(user_id)
-            q = db.Query(CatalogUser)
-            q.filter('user_id =', user_id)
-            user = q.get()
-            log.info("user is ")
-            log.info(user)
-            if not user is None:
-                user.channel_token = token
-                user.put()
-                return True   
         
-        return False
-    
-    
-    #///////////////////////////////////////////////////////////////////////////////////////////
-    
-           
+
+    #///////////////////////////////////////
+              
+
+    @safety_mysql   
     def client_insert( self, client_id, client_name,
         client_uri, description, logo_uri, web_uri, namespace):
        
-        log.info("parsing %s" % client_uri)
+        query = """
+             INSERT INTO %s.%s VALUES ( %s, %s, %s, %s, %s, %s, %s, %s )
+        """  % ( self.DB_NAME, self.TBL_CATALOG_CLIENTS, 
+                 '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', ) 
+
+        #client_id, user_id and checksum must be unique, to prevent duplicate queries
+        self.cursor.execute( 
+            query, ( 
+                client_id,
+                client_name,
+                client_uri, 
+                description, 
+                logo_uri, 
+                web_uri,
+                namespace,
+                time.time()
+            ) 
+        )
         
-        parsedurl = urlparse.urlparse(client_uri)
-        log.info(parsedurl)
-        
-        client_domain = "%s://%s" % (parsedurl.scheme, parsedurl.netloc)
-        
-        log.info("client domain is %s" % client_domain)
-        
-        client = CatalogClient(client_id=client_id, client_name=client_name,
-        client_uri=client_uri, client_domain=client_domain, description=description, logo_uri=logo_uri, web_uri=web_uri, namespace=namespace, registered=time.time())
-        
-        client.put()
-                
         
     #///////////////////////////////////////
-    
-    
+
+    @safety_mysql                
     def client_fetch_by_id( self, client_id ) :
+        
         if not client_id: return None
         
-        q = db.Query(CatalogClient)
-        q.filter('client_id =', client_id)
+        query = "SELECT * FROM %s.%s WHERE client_id = %s" % \
+            ( self.DB_NAME, self.TBL_CATALOG_CLIENTS, '%s', )
+        self.cursor.execute( query, ( client_id, ) )
         
-        return q.get()
+        return self.cursor.fetchone()
         
+    
     #///////////////////////////////////////
-               
+
+
+    @safety_mysql                
     def client_fetch_by_name( self, client_name ) :
         
         if not client_name: return None
         
-        q = db.Query(CatalogClient)
-        q.filter('client_name =', client_name)
-        
-        return q.get()
-        
+        query = "SELECT * FROM %s.%s WHERE client_name = %s" % \
+            ( self.DB_NAME, self.TBL_CATALOG_CLIENTS, '%s', )
+        self.cursor.execute( query, ( client_name, ) )
+        return self.cursor.fetchone()   
                       
+  
     #////////////////////////////////////////////////////////////////////////////////////////////
-    
+    @safety_mysql
     def client_fetch_by_name_uri( self, client_name, client_uri ) :
         
         if not ( client_name or  client_uri): return None
         
-        q = db.Query(CatalogClient)
-        q.filter('client_name =', client_name).filter('client_uri =', client_uri)
-        
-        return q.get()
-        
+	query = "SELECT * FROM %s.%s WHERE client_name = %s AND client_uri = %s" % \
+            ( self.DB_NAME, self.TBL_CATALOG_CLIENTS, '%s', '%s' )
+        self.cursor.execute( query, ( client_name, client_uri) )
+        return self.cursor.fetchone()
+ 
                       
     #////////////////////////////////////////////////////////////////////////////////////////////
     
+
+    @safety_mysql   
     def resource_insert( self, resource_id, resource_name,
-        resource_uri, description, logo_uri, web_uri, namespace):  
-        resource = CatalogResource(resource_id=resource_id, resource_name=resource_name,
-        resource_uri=resource_uri, description=description, logo_uri=logo_uri, web_uri=web_uri, namespace=namespace, registered=time.time())
-        resource.put()
-        return resource.key()
-        
-    
-    #///////////////////////////////////////
-    
-    def resource_fetch_by_key(self, resource_key):
-        if not resource_key:
-            return None
-            
-        log.info("getting resource by key %s" % resource_key)
-        return db.get(resource_key)
-        
+        resource_uri, description, logo_uri, web_uri, namespace):
+       
+        query = """
+             INSERT INTO %s.%s VALUES ( %s, %s, %s, %s, %s, %s, %s, %s )
+        """  % ( self.DB_NAME, self.TBL_CATALOG_RESOURCES, 
+                 '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', ) 
          
+        #client_id, user_id and checksum must be unique, to prevent duplicate queries
+        self.cursor.execute( 
+            query, ( 
+                resource_id,
+                resource_name,
+                resource_uri, 
+                description, 
+                logo_uri, 
+                web_uri,
+                namespace,
+                time.time()
+            ) 
+        )
+        
     #///////////////////////////////////////
 
-              
+
+    @safety_mysql                
     def resource_fetch_by_id( self, resource_id ) :
         
         if not resource_id: return None
         
-        q = db.Query(CatalogResource)
-        q.filter('resource_id =', resource_id)
+        query = "SELECT * FROM %s.%s WHERE resource_id = %s" % \
+            ( self.DB_NAME, self.TBL_CATALOG_RESOURCES, '%s', )
+        self.cursor.execute( query, ( resource_id, ) )
         
-        return q.get()
+        return self.cursor.fetchone()
         
     
     #///////////////////////////////////////
-              
+
+
+    @safety_mysql                
     def resource_fetch_by_name( self, resource_name, namespace ) :
-
-        log.info("fetching by name %s" % resource_name)
- 
-        if not resource_name: return None
-
- 	log.info("am here..")
-       
-        q = db.Query(CatalogResource)
-        q.filter('resource_name =', resource_name).filter('namespace =', namespace)
         
-        return q.get()
-
-    def resource_registered(self, catalog_uri, resource_owner=None, resource_name=None):
+        if not resource_name: return None
+        
+        query = "SELECT * FROM %s.%s WHERE resource_name = %s AND namespace = %s" % \
+            ( self.DB_NAME, self.TBL_CATALOG_RESOURCES, '%s', '%s', )
+            
+        self.cursor.execute( query, ( resource_name, namespace) )
+        return self.cursor.fetchone()   
+    
+    @safety_mysql                
+    def resource_registered( self, catalog_uri, resource_owner=None, resource_name=None):
         
         log.info("in here and onwer is %s and name is %s", resource_owner, resource_name)
         
-        q = db.Query(CatalogInstall)
-         
+        query = "SELECT %s.*, %s.resource_name, %s.resource_uri from %s.%s LEFT JOIN %s ON %s.resource_id = %s.resource_id" % (self.TBL_CATALOG_INSTALLS, self.TBL_CATALOG_RESOURCES, self.TBL_CATALOG_RESOURCES, self.DB_NAME, self.TBL_CATALOG_INSTALLS, self.TBL_CATALOG_RESOURCES, self.TBL_CATALOG_INSTALLS, self.TBL_CATALOG_RESOURCES)
+        
+        
         if resource_name is not None:
             log.info("filtering on resource name")
-            q.filter('resource_name =', resource_name)
-            
-        results = q.fetch(limit=1000)
+            query = "%s WHERE resource_name = %s" % (query, '%s')
+            self.cursor.execute( query, ( resource_name, ) )
+        else:
+            self.cursor.execute( query )
         
-        log.info("got some results")
+        results = self.cursor.fetchall()
+        
+        log.info("got some results for query %s " % query)
         log.info(results)
         
         listing = []
          
         for install in results:
-            log.info(install)
-            qc = db.Query(CatalogUser)
+           
+            log.info(install)  
+            qc = "SELECT * from %s.%s WHERE user_id = %s" % (self.DB_NAME, self.TBL_CATALOG_USERS, '%s')
             
             if resource_owner is not None:
-                qc.filter('user_name =', resource_owner)
-                
-            qc.filter('user_id =', install.user_id)
-            user = qc.get()
-            log.info(user)
+                qc = "%s WHERE user_name = %s" % (qc, '%s')
+                self.cursor.execute( qc, ( install['user_id'], resource_owner, ) )
+            else:
+                self.cursor.execute(qc, (install['user_id'],))
             
+            user = self.cursor.fetchone()
+         
             if not(user is None):
-                listing.append({'catalog_uri': catalog_uri, 'owner': user.user_name, 'resource_name':  install.resource.resource_name, 'resource_uri': install.resource.resource_uri})
+                listing.append({'catalog_uri': catalog_uri, 'owner': user['user_name'], 'resource_name':  install['resource_name'], 'resource_uri': install['resource_uri']})
         
         log.info(listing)
         return listing
-         
     #////////////////////////////////////////////////////////////////////////////////////////////
-    def install_insert( self, user_id, resource,
+    
+    @safety_mysql   
+    def install_insert( self, user_id, resource_id,
         state, install_token, auth_code ):
+
+        query = """
+             INSERT INTO %s.%s VALUES ( %s, %s, %s, %s, %s, %s, %s )
+        """  % ( self.DB_NAME, self.TBL_CATALOG_INSTALLS, 
+                 '%s', '%s', '%s', '%s', '%s', '%s', '%s', ) 
         
-        install = CatalogInstall( user_id=user_id, resource=resource, resource_name=resource.resource_name, resource_id=resource.resource_id, state=state, install_token=install_token, auth_code=auth_code, created=time.time(), ctime=time.time() )
+        #client_id, user_id and checksum must be unique, to prevent duplicate queries
+        self.cursor.execute( 
+            query, ( 
+                user_id,
+                resource_id,
+                state, 
+                install_token, 
+                auth_code, 
+                time.time(),
+                time.time(),                
+            ) 
+        )
         
-        install.put()
-        return install
         
+    #///////////////////////////////////////
+
+
+    @safety_mysql                
     def install_fetch_by_id( self, user_id, resource_id ) :
         
         if not resource_id: return None
-        q = db.Query(CatalogInstall)
-        q.filter('user_id =', user_id).filter('resource_id =', resource_id)
-        return q.get()
         
-        #fetch(limit=1000)
-       
-        #for install in installs:
-        #    if (install.resource.resource_id == resource_id):
-        #        return install
+        query = "SELECT * FROM %s.%s WHERE user_id = %s AND resource_id = %s" % \
+            ( self.DB_NAME, self.TBL_CATALOG_INSTALLS, '%s', '%s' )
+        self.cursor.execute( query, ( user_id, resource_id, ) )
         
-        #return None   
+        return self.cursor.fetchone()
     
     
     #///////////////////////////////////////
-               
+
+
+    @safety_mysql                
     def install_fetch_by_name( self, user_id, resource_name ) :
 
         if not resource_name: return None
-        q = db.Query(CatalogInstall)
-        q.filter('user_id =', user_id)
-        q.filter('resource_name =', resource_name)
-        row = q.get()
-        return row
-        
+        query = """
+                SELECT * FROM %s.%s i, %s.%s r 
+                WHERE i.user_id = %s 
+                AND i.resource_id = r.resource_id
+                AND r.resource_name = %s
+            """ % \
+            ( self.DB_NAME, self.TBL_CATALOG_INSTALLS,
+              self.DB_NAME, self.TBL_CATALOG_RESOURCES, 
+               '%s', '%s' )
+
+        self.cursor.execute( query, ( user_id, resource_name, ) )
+
+        return self.cursor.fetchone()
+    
+    
     #///////////////////////////////////////
-  
-              
+
+
+    @safety_mysql                
     def install_fetch_by_auth_code( self, auth_code ) :
-        log.info("fetching by authcode: %s", auth_code)
         
         if auth_code :
-            q = db.Query(CatalogInstall)
-            q.filter('auth_code =', auth_code)
-            row = q.get()
-            
+            query = """
+                SELECT * FROM %s.%s t where auth_code = %s 
+            """  % ( self.DB_NAME, self.TBL_CATALOG_INSTALLS, '%s' ) 
+        
+            self.cursor.execute( query, ( auth_code, ) )
+            row = self.cursor.fetchone()
+
             if not row is None:
                 return row
             else :
                 return None
         else :
             return None
-    
-    def install_fetch_by_key( self, install_key ) :    
         
-        if not install_key:
-            return None
         
-        return db.get(install_key)
-            
     #////////////////////////////////////////////////////////////////////////////////////////////
 
+
+    @safety_mysql   
     def processor_insert( self, 
-        user_id, client, state, resource, 
+        user_id, client_id, state, resource_name, 
         expiry_time, query_code, request_status ):
-     
+       
         #create a SHA checksum for the file
         checksum = hashlib.sha1( query_code ).hexdigest()
-        
-        processor = CatalogProcessor(user_id=user_id, client=client, state=state,resource=resource, expiry_time=float(expiry_time), query=query_code, request_status=request_status, created=time.time())
-        
-        processor.put()
-        return processor
+
+        query = """
+             INSERT INTO %s.%s VALUES 
+             ( null, %s, %s, %s, %s, %s, %s, %s, %s, null, null, '%s', null )
+        """  % ( self.DB_NAME, self.TBL_CATALOG_PROCESSORS, 
+                 '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ) 
+
+        #client_id, user_id and checksum must be unique, to prevent duplicate queries
+        self.cursor.execute( 
+            query, ( 
+                user_id, 
+                client_id, 
+                state,
+                resource_name,               
+                expiry_time, 
+                query_code,
+                checksum,
+                request_status,
+                time.time() 
+            ) 
+        )
+
+        self.commit()
+    
         
     #///////////////////////////////////////
 
-               
+
+    @safety_mysql                
     def processor_fetch_by_id( self, processor_id ) :
 
         if processor_id :
-           return CatalogProcessor().get_by_id(int(processor_id))
-        else: 
-           return None
+            query = """
+                SELECT t.*, r.*, c.* FROM %s.%s t
+                JOIN %s.%s r ON r.resource_id = t.resource_id
+                JOIN %s.%s c ON c.client_id = t.client_id
+                WHERE processor_id = %s
+            """  % ( 
+                self.DB_NAME, self.TBL_CATALOG_PROCESSORS, 
+                self.DB_NAME, self.TBL_CATALOG_RESOURCES,
+                self.DB_NAME, self.TBL_CATALOG_CLIENTS, '%s', )
+           
+            self.cursor.execute( query, ( processor_id, ) )
+            row = self.cursor.fetchone()
+
+            if not row is None:
+                return row
+            else :
+                return None
+        else :
+            return None     
+        
 
     #///////////////////////////////////////
 
-         
-    
+
+    @safety_mysql                
     def processor_fetch_by_auth_code( self, auth_code ) :
 
         if auth_code :
-            q = db.Query(CatalogProcessor)
-            q.filter('auth_code =', auth_code)
-            row = q.get()
+            query = """
+                SELECT * FROM %s.%s t where auth_code = %s 
+            """  % ( self.DB_NAME, self.TBL_CATALOG_PROCESSORS, '%s' ) 
         
+            self.cursor.execute( query, ( auth_code, ) )
+            row = self.cursor.fetchone()
+
             if not row is None:
                 return row
             else :
@@ -443,25 +690,37 @@ class CatalogDB():
         else :
             return None              
 
-    def processor_fetch_by_key( self, key ) :
-        if key:
-            return db.get(key)
-        return None
-        
+    
     #///////////////////////////////////////
-               
+
+
+    @safety_mysql                
     def processor_update( self, processor_id, request_status, access_token, auth_code ) :
 
-        if processor_id and access_token : 
+        if processor_id and access_token :
+            query = """
+                UPDATE %s.%s 
+                SET request_status=%s, access_token = %s, auth_code = %s, ctime = %s
+                where processor_id = %s 
+            """  % ( self.DB_NAME, self.TBL_CATALOG_PROCESSORS, '%s', '%s', '%s', '%s', '%s' ) 
         
-            processor = CatalogProcessor().get_by_id(int(processor_id))
-     
-            if not processor is None:
-                processor.request_status = request_status
-                processor.access_token = access_token
-                processor.auth_code = auth_code
-                processor.put()
+            update = self.cursor.execute( 
+                query, 
+                ( request_status, access_token, auth_code,  time.time(), processor_id, ) 
+            )
+            
+            if update > 0 :
+                log.debug( 
+                    "%s: Access request %s registered with access_token %s" 
+                    % ( self.name, processor_id, access_token )  
+                )
                 return True
+            else:
+                log.warning( 
+                    "%s: trying to update an unknown request %s" 
+                    % (self.name, processor_id ) 
+                )
+                return False
         else :
             log.warning( 
                 "%s: attempting to update access request with insufficient parameters" 
@@ -471,15 +730,19 @@ class CatalogDB():
       
         
     #///////////////////////////////////////
-    
+
+
+    @safety_mysql                
     def processor_delete( self, processor_id ) :
 
         if processor_id :
-            processor = CatalogProcessor().get_by_id(int(processor_id))
-            log.info("in database - got processor to delete!")
+            query = """
+                DELETE FROM %s.%s WHERE processor_id = %s 
+            """  % ( self.DB_NAME, self.TBL_CATALOG_PROCESSORS, '%s' ) 
+        
+            update = self.cursor.execute( query, ( processor_id, ) )
             
-            if not processor is None:
-                processor.delete()
+            if update > 0 :
                 log.debug( "%s: Access request %s deleted" % ( self.name, processor_id ) )
                 return True
             else:
@@ -494,25 +757,38 @@ class CatalogDB():
         
 
     #///////////////////////////////////////
-          
+    
+  
+    @safety_mysql                
     def processors_fetch( self, user_id = None ):
       
         if user_id:
-            q = db.Query(CatalogProcessor)
-            q.filter('user_id =', user_id)
-            return q.fetch(limit=100)
+            
+            query = """
+                SELECT s.*, t.client_name, r.resource_name
+                FROM %s.%s s, %s.%s t, %s.%s r
+                WHERE s.user_id = %s 
+                AND s.client_id = t.client_id
+                AND s.resource_id = r.resource_id
+            """ % ( 
+                self.DB_NAME, self.TBL_CATALOG_PROCESSORS, 
+                self.DB_NAME, self.TBL_CATALOG_CLIENTS,
+                self.DB_NAME, self.TBL_CATALOG_RESOURCES,  '%s' 
+            )
+
+            self.cursor.execute( query, ( user_id, ) )
+            return self.cursor.fetchall()
         else:
             return None
-            
-            
-    #///////////////////////////////////////
-     
+
+    @safety_mysql    
     def purgedata(self):
-        db.delete(CatalogProcessor.all())
-        db.delete(CatalogInstall.all())
-        db.delete(CatalogResource.all())
-        db.delete(CatalogClient.all())
-        db.delete(CatalogUser.all())
-        
-       
-        
+        try:
+            self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_USERS))
+            self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_PROCESSORS))
+            self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_INSTALLS))
+            self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_CLIENTS))
+            self.cursor.execute("DELETE FROM %s.%s" % ( self.DB_NAME, self.TBL_CATALOG_RESOURCES))
+            self.commit()
+        except Exception, e:
+            print e 
