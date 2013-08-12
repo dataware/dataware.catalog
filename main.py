@@ -316,7 +316,7 @@ def resource_authorize_endpoint():
     
     log.info("resource id is %s" % resource_id)
     log.info("resource uri us %s" % resource_uri)
-    log.info("state is " % state)
+    log.info("state is %s " % state)
     
     result = am.resource_authorize( 
         user,
