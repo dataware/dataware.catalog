@@ -6,12 +6,8 @@ from CatalogDB import *
 import logging
 import AuthorizationModule
 import wsgiref.util
-import settings
-
 from framework import bottle
 from framework.bottle import *
-#from google.appengine.ext.webapp.util import run_wsgi_app
-#from google.appengine.api import channel
 
 from os.path import join, dirname
 
