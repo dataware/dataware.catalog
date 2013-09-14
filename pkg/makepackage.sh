@@ -13,16 +13,16 @@ cp $PKG_DIR/dirs ./
 cd ..
 cp $PKG_DIR/mysql.sql ./
 dpkg-buildpackage -rfakeroot -uc -us
-#cd debian/dataware-catalog
-#mkdir -p var/dataware/catalog
-#mkdir -p etc/dataware
-#mkdir -p var/log/dataware
-#chmod -R 777 var/log/dataware
-#mv ../../dataware/catalog/static ./var/dataware/catalog
-#mv ../../dataware/catalog/views  ./var/dataware/catalog
-#cp ../../dataware/__init__.py ./usr/share/pyshared/dataware
-#cp ../../dataware/catalog/__init__.py ./usr/share/pyshared/dataware/catalog
-#cp ../../dataware/catalog/catalog.cfg ./usr/share/pyshared/dataware/catalog
-#cd ..
-#dpkg --build dataware-catalog dataware-catalog.deb
-#cp dataware-catalog.deb $ROOT_DIR 
+cd debian/dataware-catalog
+mkdir -p var/dataware/catalog
+mkdir -p etc/dataware
+mkdir -p var/log/dataware
+chmod -R 777 var/log/dataware
+mv ../../dataware/catalog/static ./var/dataware/catalog
+mv ../../dataware/catalog/views  ./var/dataware/catalog
+cp ../../dataware/__init__.py ./usr/share/pyshared/dataware
+cp ../../dataware/catalog/__init__.py ./usr/share/pyshared/dataware/catalog
+cp ../../dataware/catalog/catalog.cfg ./usr/share/pyshared/dataware/catalog
+cd ..
+dpkg --build dataware-catalog dataware-catalog.deb
+cp dataware-catalog.deb $ROOT_DIR 

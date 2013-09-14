@@ -5,7 +5,7 @@ Priority: optional
 Build-Depends: python-setuptools (>= 0.6b3), debhelper (>= 7), python-support (>= 0.8.4)
 Standards-Version: 3.8.4
 
-Package: dataware-energy
+Package: dataware-catalog
 Architecture: armel 
 Depends: mysql-server, dbconfig-common, dataware-mysql-python, dataware-sqlalchemy,  dataware-wsgiref, dataware-greenlet, dataware-gevent, dataware-sqlparse, ${misc:Depends}, ${python:Depends}
 XB-Python-Version: ${python:Versions}

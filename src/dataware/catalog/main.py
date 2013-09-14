@@ -611,13 +611,12 @@ def test_query():
     
 @route( "/static/:filename" )
 def user_get_static_file( filename ):
-    return static_file( filename, root=os.path.join(appPath, 'static'))
+    return static_file( filename, root=os.path.join(ROOT_PATH, 'static'))
 
 @route( "/static/:path#.+#" )
 
 def user_get_static_file( path ):
-   
-    return static_file( path, root='static/')
+    return static_file( path, root=os.path.join(ROOT_PATH, 'static'))
 
  
  
@@ -846,64 +845,71 @@ def _valid_name( str ):
 
 
 def _valid_email( str ):
-    
     return re.search( "^[A-Za-z0-9%._+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}$", str )
 
 
+def main():
+
+   global db
+   global am
+   global appPath	 
+   #----------logging --------------#
+   log = logging.getLogger( 'console_log' )        
+   log.setLevel (logging.DEBUG)
+   ch = logging.StreamHandler(sys.stdout)
+	
+   log.addHandler(ch)
+
+   try:
+      db = CatalogDB(dbconfig)
+      db.connect()
+      db.check_tables()
+   except Exception, e:
+      log.error("DB init failure %s" % e)
+      exit()
+   
+   try:    
+      am = AuthorizationModule.AuthorizationModule( db, WEB_PROXY )
+   except Exception, e:
+     log.error( "Authorization Module failure: %s" % ( e, ) )
+     exit()
+   
+   appPath = dirname(__file__)	
+
+   try:
+      debug(True)
+      run (host="0.0.0.0", port=int(PORT), quiet=False)
+   except Exception, e:
+      log.error("Web server exception! " % e)
+      exit()         
+
+#///////////////constants//////////////////////
+
+CONFIG_FILE = "/root/dataware.catalog/src/dataware/catalog/catalog.cfg"
+Config = ConfigParser.ConfigParser()
+Config.read( CONFIG_FILE )
+serverconfig = dict( Config.items( "server" ) )
+dbconfig = dict( Config.items( "db" ) )
+
+ROOT_PATH = "/root/dataware.catalog/src/dataware/catalog"
+EXTENSION_COOKIE = serverconfig.get( "extension_cookie" )
+PORT = serverconfig.get("port")
+REALM = serverconfig.get("realm")
+ROOT_PAGE = serverconfig.get("root_page")	
+WEB_PROXY= serverconfig.get("web_proxy")
+REALM = serverconfig.get("realm")
+TEMPLATE_PATH.insert(0, '%s/views' % ROOT_PATH)
+    
+if not EXTENSION_COOKIE : EXTENSION_COOKIE = "catalog_logged_in"
+if not PORT : PORT = 80
+if not ROOT_PAGE : ROOT_PAGE = "/"
+if not REALM : 
+  REALM = "localhost:%s" % PORT
+else : 
+  REALM += ":%s" % PORT
+
+	
 #///////////////////////////////////////////////
 if __name__ == '__main__':      
-	CONFIG_FILE = "catalog.cfg"
-	Config = ConfigParser.ConfigParser()
-	Config.read( CONFIG_FILE )
-        serverconfig = dict( Config.items( "server" ) )
-	dbconfig = dict( Config.items( "db" ) )
-
-	EXTENSION_COOKIE = serverconfig.get( "extension_cookie" )
-	PORT = serverconfig.get("port")
-	REALM = serverconfig.get("realm")
-	ROOT_PAGE = serverconfig.get("root_page")	
-	WEB_PROXY= serverconfig.get("web_proxy")
-        REALM = serverconfig.get("realm")
-
-	if not EXTENSION_COOKIE : EXTENSION_COOKIE = "catalog_logged_in"
-    	if not PORT : PORT = 80
-    	if not ROOT_PAGE : ROOT_PAGE = "/"
-    	if not REALM : REALM = "localhost:%s" % PORT
-    	else : REALM += ":%s" % PORT
-	 
-
-	#----------logging --------------#
-	log = logging.getLogger( 'console_log' )        
-	log.setLevel (logging.DEBUG)
-        ch = logging.StreamHandler(sys.stdout)
-	
-	log.addHandler(ch)
-
-	#sys.stdout = std_writer("stdout")
-	#sys.stderr = std_writer("stderr")
-
-	try:
-		db = CatalogDB(dbconfig)
-        	db.connect()
-		db.check_tables()
-	except Exception, e:
-		log.error("DB init failure %s" % e)
-		exit()
-	try:    
-   		am = AuthorizationModule.AuthorizationModule( db, WEB_PROXY )
-	except Exception, e:
-    		log.error( "Authorization Module failure: %s" % ( e, ) )
-    		exit()
-        
-        appPath = dirname(__file__)	
-
-	try:
-		debug(True)
-		run (host="0.0.0.0", port=int(PORT), quiet=False)
-	except Exception, e:
-		log.error("Web server exception! " % e)
-		exit()         
-	
+	main()
 	#app = bottle.default_app()
-	
-
