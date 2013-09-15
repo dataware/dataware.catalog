@@ -893,13 +893,15 @@ serverconfig = dict( Config.items( "server" ) )
 dbconfig = dict( Config.items( "db" ) )
 
 ROOT_PATH = serverconfig.get("root_path") 
+print ROOT_PATH
 EXTENSION_COOKIE = serverconfig.get( "extension_cookie" )
 PORT = serverconfig.get("port")
 REALM = serverconfig.get("realm")
 ROOT_PAGE = serverconfig.get("root_page")	
 WEB_PROXY= serverconfig.get("web_proxy")
 REALM = serverconfig.get("realm")
-TEMPLATE_PATH.insert(0, '%s/views' % ROOT_PATH)
+print '%s/views/' % ROOT_PATH
+TEMPLATE_PATH.insert(0, '%s/views/' % ROOT_PATH)
     
 if not EXTENSION_COOKIE : EXTENSION_COOKIE = "catalog_logged_in"
 if not PORT : PORT = 80
@@ -908,7 +910,7 @@ if not REALM :
   REALM = "localhost:%s" % PORT
 else : 
   REALM += ":%s" % PORT
-
+print REALM
 	
 #///////////////////////////////////////////////
 if __name__ == '__main__':      
