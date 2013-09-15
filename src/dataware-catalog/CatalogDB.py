@@ -37,7 +37,7 @@ def safety_mysql( fn ) :
 
     
 class CatalogDB( object ):
-    DB_NAME = 'catalog' 
+    DB_NAME = 'datawarecatalog' 
     
     TBL_CATALOG_USERS = 'tblCatalogUsers'
     TBL_CATALOG_CLIENTS = 'tblCatalogClients'

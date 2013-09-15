@@ -19,10 +19,10 @@ install: build
 	dh_testdir
 	dh_testroot
 	dh_installdirs
-	cp mysql.sql debian/dataware-catalog/usr/share/dbconfig-common/data/dataware-catalog/install/mysql
+#	cp mysql.sql debian/dataware-catalog/usr/share/dbconfig-common/data/dataware-catalog/install/mysql
 
 
 %:
 	dh_installdirs
-	cp mysql.sql debian/dataware-catalog/usr/share/dbconfig-common/data/dataware-catalog/install/mysql
+#	cp mysql.sql debian/dataware-catalog/usr/share/dbconfig-common/data/dataware-catalog/install/mysql
 	dh $@

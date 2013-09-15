@@ -885,13 +885,14 @@ def main():
 
 #///////////////constants//////////////////////
 
-CONFIG_FILE = "/root/dataware.catalog/src/dataware/catalog/catalog.cfg"
+configfile = sys.argv[1]
 Config = ConfigParser.ConfigParser()
-Config.read( CONFIG_FILE )
+Config.read(configfile)
+
 serverconfig = dict( Config.items( "server" ) )
 dbconfig = dict( Config.items( "db" ) )
 
-ROOT_PATH = "/root/dataware.catalog/src/dataware/catalog"
+ROOT_PATH = serverconfig.get("root_path") 
 EXTENSION_COOKIE = serverconfig.get( "extension_cookie" )
 PORT = serverconfig.get("port")
 REALM = serverconfig.get("realm")
@@ -912,4 +913,3 @@ else :
 #///////////////////////////////////////////////
 if __name__ == '__main__':      
 	main()
-	#app = bottle.default_app()

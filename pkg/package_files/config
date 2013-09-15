@@ -6,5 +6,5 @@ set -e
 . /usr/share/debconf/confmodule
 if [ -f /usr/share/dbconfig-common/dpkg/config.mysql ]; then
 	. /usr/share/dbconfig-common/dpkg/config.mysql 
-	dbc_go dataware-config $@
+	dbc_go dataware-catalog $@
 fi
