@@ -718,6 +718,11 @@ class AuthorizationModule( object ) :
         
             #contact the resource provider and fetch the access token  
             try:    
+		log.error("doing an access token checkup!")
+		log.error("processor is")
+		log.error(processor)
+		log.error("install is")
+		log.error(install)
                 access_token = self._client_permit_request( processor, install )
             except PermitException, e:
                 #the processing request has been rejected by the resource_provider
@@ -772,19 +777,13 @@ class AuthorizationModule( object ) :
     
       
     def _client_permit_request( self, processor, install ):
-        
+        log.info("in client permit request!") 
         """
             Once the user has accepted an authorization request, the catalog
             must check that the resource provider is happy to permit the query 
             to be run on its server. If this fails a RegisterException will
             be thrown that the calling function must handle accordingly.
         """
-        #if request is for experiment there will be no client id associated 
-        #build up the required data parameters for the communication
-        if processor.client is not None:
-            client_id = processor.client.client_id
-        else:
-            client_id = None
         data = urllib.urlencode( {
                 'install_token': install['install_token'],
                 'client_id': processor['client_id'],
