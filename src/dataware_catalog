@@ -1,6 +1,5 @@
 #!/usr/bin/python
 import sys
-#sys.path.append('/usr/share/pyshared/dataware-catalog')
-sys.path.append('/root/dataware.catalog/src/dataware-catalog')
+sys.path.append('/usr/share/pyshared/dataware-catalog')
 import main
 main.main()
