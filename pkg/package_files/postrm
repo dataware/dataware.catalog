@@ -1,0 +1,4 @@
+#!/bin/sh
+rm -rf /usr/share/pyshared/dataware-catalog
+ucf --purge /etc/dbconfig-common/dataware-catalog.conf
+ucf --purge /etc/dataware/catalog_config.cfg
