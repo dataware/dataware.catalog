@@ -10,6 +10,7 @@ cp $PKG_DIR/config ./
 cp $PKG_DIR/postinst ./
 cp $PKG_DIR/rules ./
 cp $PKG_DIR/dirs ./
+cp $PKG_DIR/dataware-catalog.init ./
 cd ..
 #cp $PKG_DIR/mysql.sql ./
 dpkg-buildpackage -rfakeroot -uc -us
