@@ -11,6 +11,7 @@ cp $PKG_DIR/postinst ./
 cp $PKG_DIR/rules ./
 cp $PKG_DIR/dirs ./
 cp $PKG_DIR/dataware-catalog.init ./
+cp $PKG_DIR/postrm ./
 cd ..
 #cp $PKG_DIR/mysql.sql ./
 dpkg-buildpackage -rfakeroot -uc -us
