@@ -423,37 +423,7 @@ def client_request_endpoint( user_name = None ):
     return result
 
 
-#//////////////////////////////////////////////////////////
-
-    
-@route( "/user/:user_name/client_experiment_request", methods=['GET','POST'] )
-def client_experiment_request_endpoint( user_name = None ):
-    log.info("Inside experiment end point **************************")
-    #client_id = request.forms.get( "client_id" )
-    state = request.GET[ "state" ]
-    client_uri =  request.GET[ "redirect_uri" ]
-    json_scope = request.GET[ "scope" ]
-    log.info("client experiment request endpoint  %s %s" % ( state, client_uri))
-    
-    result = am.client_experiment_request( 
-        user_name = user_name,
-        state = state,
-        client_uri = client_uri,
-        json_scope = json_scope 
-    )
- 
-    log.debug( 
-        "Catalog_server: Client experiment Request from to %s: %s" 
-        % (user_name, result ) 
-    )
-    url = "/audit?fromPage="+"client"  
-    redirect(url) 
-
-
-
-
-
-    
+   
 #//////////////////////////////////////////////////////////
  
 
