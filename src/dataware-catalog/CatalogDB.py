@@ -510,7 +510,7 @@ class CatalogDB( object ):
             qc = "SELECT * from %s.%s WHERE user_id = %s" % (self.DB_NAME, self.TBL_CATALOG_USERS, '%s')
             
             if resource_owner is not None:
-                qc = "%s WHERE user_name = %s" % (qc, '%s')
+                qc = "%s AND user_name = %s" % (qc, '%s')
                 self.cursor.execute( qc, ( install['user_id'], resource_owner, ) )
             else:
                 self.cursor.execute(qc, (install['user_id'],))
