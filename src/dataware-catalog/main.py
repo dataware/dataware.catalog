@@ -805,7 +805,12 @@ def user_audit():
 def purge():    
     db.purgedata()
     redirect( "/" )
-    
+
+@route( "/reset" )
+def purge():    
+    db.resetdata()
+    redirect( "/" )   
+     
 #///////////////////////////////////////////////  
 def _valid_name( str ):
     
