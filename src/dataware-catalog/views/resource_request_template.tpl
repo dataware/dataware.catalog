@@ -87,7 +87,7 @@
 	<div style="margin:25px auto; padding:15px; border:1px dotted #cccccc; width:420px; 
 	text-align:left; font-family:georgia; font-size:13px; color: #888888; ">
 		<div> 
-			<img src="./static/dwlogofull.png" width="220px"/>
+			<img src="./static/cataloglogo.png" width="220px"/>
 		</div>
 		<div style="font-style:italic; margin:5 0 0 2;">
 			A dataware resource is asking to be installed to your catalog:

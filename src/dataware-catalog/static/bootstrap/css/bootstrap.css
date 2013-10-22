@@ -4154,12 +4154,12 @@ input[type="submit"].btn.btn-mini {
   min-height: 40px;
   padding-right: 20px;
   padding-left: 20px;
-  background-color: #0088cc;
-  background-image: -moz-linear-gradient(top, #0088cc, #0044cc);
-  background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#0088cc), to(#0044cc));
-  background-image: -webkit-linear-gradient(top, #0088cc, #0044cc);
-  background-image: -o-linear-gradient(top, #0088cc, #0044cc);
-  background-image: linear-gradient(to bottom, #0088cc, #0044cc);
+  background-color: #4c9692;
+  background-image: -moz-linear-gradient(top, #4c9692, #1e8585);
+  background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#4c9692), to(#1e8585));
+  background-image: -webkit-linear-gradient(top, #4c9692, #1e8585);
+  background-image: -o-linear-gradient(top, #4c9692, #1e8585);
+  background-image: linear-gradient(to bottom, #4c9692, #1e8585);
   background-repeat: repeat-x;
   border: 1px solid #d4d4d4;
   -webkit-border-radius: 4px;
@@ -4199,7 +4199,6 @@ input[type="submit"].btn.btn-mini {
   font-size: 20px;
   font-weight: 200;
   color: #ffffff;
-  text-shadow: 0 -1px 0 rgba(0,0,0,0,0.25);
 }
 
 .navbar .brand:hover {
