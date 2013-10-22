@@ -26,7 +26,10 @@ def user_home( ):
         return user_error( e )
    
     #redirect("/audit")
-    return template( "home_page_template", REALM=REALM, user=user);
+    resources = None
+    if user:
+        resources = db.resources_fetch_by_user( user['user_id'] )
+    return template( "home_page_template", REALM=REALM, user=user, resources=resources);
 
 #///////////////////////////////////////////////
 

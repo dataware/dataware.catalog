@@ -469,7 +469,17 @@ class CatalogDB( object ):
         
     
     #///////////////////////////////////////
-
+    @safety_mysql
+    def resources_fetch_by_user(self, user_id):
+        
+        query = "SELECT %s.*, %s.resource_name, %s.resource_uri from %s.%s LEFT JOIN %s ON %s.resource_id = %s.resource_id WHERE %s.user_id = %s" % (self.TBL_CATALOG_INSTALLS, self.TBL_CATALOG_RESOURCES, self.TBL_CATALOG_RESOURCES, self.DB_NAME, self.TBL_CATALOG_INSTALLS, self.TBL_CATALOG_RESOURCES, self.TBL_CATALOG_INSTALLS, self.TBL_CATALOG_RESOURCES, self.TBL_CATALOG_INSTALLS, '%s')
+        
+        self.cursor.execute(query, (user_id))
+        
+        results =  self.cursor.fetchall()
+        print results
+        return results
+    
 
     @safety_mysql                
     def resource_fetch_by_name( self, resource_name, namespace ) :
