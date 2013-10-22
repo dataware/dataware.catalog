@@ -16,9 +16,11 @@
     %if user:
         
             %if resources:
+            <h4> You are sharing the following resources with this catalog: </h4>
             <table class="table table-condensed table-striped table-bordered">
                <thead>
                     <tr>
+                        <th>shared</th>
                         <th>resource name</th>
                         <th>location</th>
                     </tr>   
@@ -26,14 +28,15 @@
                 <tbody>
                     %for resource in resources:
                     <tr>
-                        <td> {{resource['resource_name']}} </td>
-                        <td> <a href="{{resource['resource_uri']}}">{{resource['resource_uri']}}</a></td>
+                        <td> {{resource['created']}}</td>
+                        <td> {{resource['name']}}</td>
+                        <td> <a href="{{resource['uri']}}">{{resource['uri']}}</a></td>
                     </tr>
                     %end 
                 </tbody>
             </table>
             %else:
-                <div class="well">
+                <div class="alert alert-info">
                 You currently have no resources registered with your catalog.  To register a resource, go to your resource's url and click on 'share data'.  You will be prompted for your catalog's url (use this one) and to confirm that you wish to add the resource to this catalog.
                  </div>
             %end

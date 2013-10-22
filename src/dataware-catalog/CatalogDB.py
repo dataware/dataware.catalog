@@ -8,6 +8,8 @@ import ConfigParser
 import hashlib
 import logging
 import time
+from datetime import date
+
 log = logging.getLogger( "console_log" )
 
 
@@ -476,9 +478,12 @@ class CatalogDB( object ):
         
         self.cursor.execute(query, (user_id))
         
-        results =  self.cursor.fetchall()
-        print results
-        return results
+        rows =  self.cursor.fetchall()
+
+        if rows:
+            return [ {"name":dict['resource_name'], "uri":dict['resource_uri'], "created": date.fromtimestamp(dict['created']).strftime("%d %B %Y")} for dict in rows] 
+
+        return None
     
 
     @safety_mysql                
@@ -494,8 +499,6 @@ class CatalogDB( object ):
     
     @safety_mysql                
     def resource_registered( self, catalog_uri, resource_owner=None, resource_name=None):
-        
-        log.info("in here and onwer is %s and name is %s", resource_owner, resource_name)
         
         query = "SELECT %s.*, %s.resource_name, %s.resource_uri from %s.%s LEFT JOIN %s ON %s.resource_id = %s.resource_id" % (self.TBL_CATALOG_INSTALLS, self.TBL_CATALOG_RESOURCES, self.TBL_CATALOG_RESOURCES, self.DB_NAME, self.TBL_CATALOG_INSTALLS, self.TBL_CATALOG_RESOURCES, self.TBL_CATALOG_INSTALLS, self.TBL_CATALOG_RESOURCES)
         

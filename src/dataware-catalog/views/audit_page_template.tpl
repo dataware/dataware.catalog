@@ -74,7 +74,9 @@
     
     
     <h4>AUDIT</h4>
-    
+    <div class="alert alert-info">
+        This page shows all executions that have been registered against your resources.
+    </div>
     <table class="table table-condensed table-striped table-bordered">
     
        <thead>
