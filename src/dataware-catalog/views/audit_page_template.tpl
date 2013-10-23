@@ -104,9 +104,9 @@
                 <td><code class="brush: python; toolbar: false" data-bind="text:query"></code></td>
                 <td>
                     <div class="btn-group" data-bind="visible:pending">
-                        <a class="btn btn-primary" href="#" data-bind="click:authorise_request">authorise</a> 
-                        <a class="btn btn-primary" href="#" data-bind="click:reject_request">reject</a> 
-                        <a class="btn btn-primary" href="#" data-bind="click:test">test</a> 
+                        <a class="btn btn-info" href="#" data-bind="click:authorise_request">authorise</a> 
+                        <a class="btn btn-info" href="#" data-bind="click:reject_request">reject</a> 
+                        <a class="btn btn-info" href="#" data-bind="click:test">test</a> 
                     </div>
 	
 					<div data-bind="visible:accepted">

@@ -46,7 +46,7 @@
             <h1>Welcome to the dataware catalog.</h1>
             <p> Manage access to your data </p>
             <p>
-                <a class="btn btn-primary btn-large">
+                <a class="btn btn-info btn-large">
                     Learn more
                 </a>
             </p>

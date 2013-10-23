@@ -19,18 +19,13 @@
 	HEADER SECTION
 ------------------------------------------------------------------>
 
-<div class="sub_header">
-	<div class="page-name">REGISTRATION</div>
-	<div class="page-description">WE JUST NEED A COUPLE MORE DETAILS...</div>
-</div>
-
 
 <!---------------------------------------------------------------- 
 	CONTENT SECTION
 ------------------------------------------------------------------>
 <div class="main">
 
-	<div style="margin:25px auto; padding:15px; border:1px dotted #cccccc; width:400px; height:240px;">
+	<div style="margin:25px auto; padding:15px; border:1px dotted #cccccc; width:230px;">
 		<div> 
 			<img src="./static/cataloglogo.png" width="220px"/>
 		</div>
@@ -47,7 +42,7 @@
 				%end
 				</div>
 		        <div>
-			        <input id="jid" class="text" name="user_name" value="{{user_name}}" type="text" size="37" />
+			        <input id="jid" name="user_name" value="{{user_name}}" type="text" style="height:25px" />
 				</div>
 
 	            <div style="margin-top:5px;">
@@ -57,11 +52,11 @@
 					%end
 				</div>
 		        <div class="right">
-			        <input id="email" class="text" name="email" value="{{email}}"  type="text" size="37" />
+			        <input id="email" name="email" value="{{email}}"  type="text" style="height:25px" />
 				</div>
 			</div>
 				
-			<input type="submit" value="Register >>" style="margin-top:60px; float:bottom; " />
+			<input type="submit" class="btn btn-info" style="margin:10 0 0 10;" value="Register" />
 			
 			<input type="hidden" name="submission" value="True" />
 		</form>
