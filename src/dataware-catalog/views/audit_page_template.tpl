@@ -74,7 +74,9 @@
     
     
     <h4>AUDIT</h4>
-    
+    <div class="alert alert-info">
+        This page shows all executions that have been registered against your resources.
+    </div>
     <table class="table table-condensed table-striped table-bordered">
     
        <thead>
@@ -102,9 +104,9 @@
                 <td><code class="brush: python; toolbar: false" data-bind="text:query"></code></td>
                 <td>
                     <div class="btn-group" data-bind="visible:pending">
-                        <a class="btn btn-primary" href="#" data-bind="click:authorise_request">authorise</a> 
-                        <a class="btn btn-primary" href="#" data-bind="click:reject_request">reject</a> 
-                        <a class="btn btn-primary" href="#" data-bind="click:test">test</a> 
+                        <a class="btn btn-info" href="#" data-bind="click:authorise_request">authorise</a> 
+                        <a class="btn btn-info" href="#" data-bind="click:reject_request">reject</a> 
+                        <a class="btn btn-info" href="#" data-bind="click:test">test</a> 
                     </div>
 	
 					<div data-bind="visible:accepted">

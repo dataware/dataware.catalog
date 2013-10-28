@@ -19,10 +19,6 @@
 	HEADER SECTION
 ------------------------------------------------------------------>
 
-<div class="sub_header">
-	<div class="page-name">LOGIN</div>
-</div>
-
 
 <!---------------------------------------------------------------- 
 	CONTENT SECTION
@@ -31,10 +27,10 @@
 
 	<div style="margin:25px auto; padding:15px; border:1px dotted #cccccc; width:230px;">
 		<div> 
-			<img src="./static/dwlogofull.png" width="220px"/>
+			<img src="./static/cataloglogo.png" width="220px"/>
 		</div>
 		<div style="text-align:left; font-style:italic; font-family:georgia; font-size:13px; color: #888888; margin:10px 0px 18px 7px;">
-			Please login with one of the following providers:
+			Please login/register with one of the following providers:
 		</div>
 		<div id="loggedOutBox" style="margin-top:5px;" >
 			<a id="google" class="openid_out" href="javascript:login('google')">	

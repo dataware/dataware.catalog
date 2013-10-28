@@ -26,7 +26,10 @@ def user_home( ):
         return user_error( e )
    
     #redirect("/audit")
-    return template( "home_page_template", REALM=REALM, user=user);
+    resources = None
+    if user:
+        resources = db.resources_fetch_by_user( user['user_id'] )
+    return template( "home_page_template", REALM=REALM, user=user, resources=resources);
 
 #///////////////////////////////////////////////
 
@@ -805,13 +808,6 @@ def user_audit():
 def purge():    
     db.purgedata()
     redirect( "/" )
-    
-    
-@route( "/reset" )
-def reset():    
-    db.resetdata()
-    return "{'success':True}"
-    
     
 #///////////////////////////////////////////////  
 def _valid_name( str ):
