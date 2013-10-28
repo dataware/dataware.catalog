@@ -809,6 +809,14 @@ def purge():
     db.purgedata()
     redirect( "/" )
     
+    
+@route( "/reset" )
+def reset():    
+    db.resetdata()
+    return "{'success':True}"
+    
+    
+
 #///////////////////////////////////////////////  
 def _valid_name( str ):
     
