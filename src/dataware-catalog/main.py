@@ -877,7 +877,6 @@ ROOT_PATH = serverconfig.get("root_path")
 print ROOT_PATH
 EXTENSION_COOKIE = serverconfig.get( "extension_cookie" )
 PORT = serverconfig.get("port")
-REALM = serverconfig.get("realm")
 ROOT_PAGE = serverconfig.get("root_page")	
 WEB_PROXY= serverconfig.get("web_proxy")
 REALM = serverconfig.get("realm")
@@ -889,8 +888,7 @@ if not PORT : PORT = 80
 if not ROOT_PAGE : ROOT_PAGE = "/"
 if not REALM : 
   REALM = "localhost:%s" % PORT
-else : 
-  REALM += ":%s" % PORT
+  
 print REALM
 	
 #///////////////////////////////////////////////
