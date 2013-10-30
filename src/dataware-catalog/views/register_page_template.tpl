@@ -33,9 +33,10 @@
 			This seems to be the first time you have logged in. To activate your account
 			please pick a user name, and register an email address:
 		</div>
-		<div id="loggedOutBox" >
+		<!--<div id="loggedOutBox" >-->
+			<div style="padding:0 10 0 8; height:auto; border:0px dotted; font-size:12px; font-family:georgia; color:#555555;">
         <form action="register" method="GET" >
-			<div style="padding:0 10 0 8; float:left; border:0px dotted; height:100px; font-size:12px; font-family:georgia; color:#555555;">
+		
 	            <div>Screen Name:
 				%if "user_name" in errors:
 					<span class="loginMessage"> {{errors[ "user_name" ]}}</span>
@@ -54,11 +55,9 @@
 		        <div class="right">
 			        <input id="email" name="email" value="{{email}}"  type="text" style="height:25px" />
 				</div>
-			</div>
-				
-			<input type="submit" class="btn btn-info" style="margin:10 0 0 10;" value="Register" />
+				<input type="submit" class="btn btn-info" style="margin:10 0 0 10;" value="Register" />
+				<input type="hidden" name="submission" value="True" />
 			
-			<input type="hidden" name="submission" value="True" />
 		</form>
 		</div>
 	</div>	
