@@ -169,8 +169,7 @@ class AuthorizationModule( object ) :
             'success':True, 
             'redirect':url
         } 
-        log.info("returning...........")
-	log.info(json.dumps( json_response ))    
+        
 
         return json.dumps( json_response )
 
@@ -248,7 +247,7 @@ class AuthorizationModule( object ) :
                 "catalog_denied", 
                 "your redirect URI must not end with /" )
         
-        log.info("checking if resource already exists.. %s" % resource_name)
+        
         #check the resource does not clash with a previously registered one
         resource = self.db.resource_fetch_by_name( resource_name, namespace )
 
@@ -259,7 +258,6 @@ class AuthorizationModule( object ) :
 
         try:
             resource_id = self._generate_access_code()
-            log.info("generated access code %s" % resource_id)
             
             self.db.resource_insert( 
                 resource_id = resource_id,                                    
@@ -294,8 +292,7 @@ class AuthorizationModule( object ) :
     
     
     def resource_authorize( self, user, resource_id, resource_uri, state ):
-        log.info("in RESOURCE AUTHORIZE!");
- 
+       
         try:   
             if not ( user ) :        
                 return self._format_failure( 
@@ -321,13 +318,13 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "You have already installed this resource." ) 
 
-            log.info("am here now!")
+            
             #all is well so create some access_token and authorization codes
             #register the request as having been updated.
             install_token = self._generate_access_code()
             auth_code = self._generate_access_code()
             
-            log.info("am in here!!")
+           
             self.db.install_insert( 
                 user["user_id"],
                 resource_id, 
@@ -335,11 +332,10 @@ class AuthorizationModule( object ) :
                 install_token,
                 auth_code                
             )
-            log.info("and have done an insert!")
-        
+           
             self.db.commit()
             
-            log.info("and am committed!")
+           
                 
             return self._format_auth_success(
                  "%s/install_complete" % ( resource_uri, ),  
@@ -407,7 +403,7 @@ class AuthorizationModule( object ) :
     
     def client_register( self, client_name, client_uri,
         description, logo_uri, web_uri, namespace ):
-        log.info("client name %s, client uri %s" % (client_name,client_uri))
+        
         if ( client_name is None or client_uri is None ) :
             return self._format_submission_failure(
                 "catalog_denied",  
@@ -428,7 +424,6 @@ class AuthorizationModule( object ) :
         
         try:
             client_id = self._generate_access_code()
-            log.info("got client id %s" % client_id)
             
             self.db.client_insert( 
                 client_id = client_id,                                    
@@ -439,9 +434,7 @@ class AuthorizationModule( object ) :
                 web_uri = web_uri,
                 namespace = namespace,
             )
-            self.db.commit()
-            log.info("inserted client")
-            
+            self.db.commit() 
 
             json_response = { 
                 'success': True,
@@ -463,9 +456,6 @@ class AuthorizationModule( object ) :
         
     def client_request( self, 
         user_name, client_id, state, client_uri, json_scope ):
-        
-        log.info("json scope is")
-        log.info(json_scope)
         user = None
         processor = None
         
@@ -497,12 +487,11 @@ class AuthorizationModule( object ) :
                 query = scope[ "query" ] 
 		
 		#check the query validity
-                log.info("CHECKING CONSTRAINTS")
+                
 		if not self._check_constraints(resource_name,query):                
  		  return self._format_submission_failure("invalid_query", "query violates constraints" )
 
-                log.info("processor install request FOR %s" % resource_name)
-              
+                
             except Exception, e:
                 return self._format_submission_failure(
                     "invalid_scope", "incorrectly formatted JSON scope" ) 
@@ -513,8 +502,6 @@ class AuthorizationModule( object ) :
                 user['user_id'],
                 resource_name )
 
-            log.info("done an install fetch by name , gor resiurce")
-            log.info("%s" % resource);
             
             if not resource:
                 return self._format_submission_failure(
@@ -525,7 +512,6 @@ class AuthorizationModule( object ) :
             #Note that if the resource the client has requested access to
             #doesn't exist, the database will throw a foreign key error.
             
-            log.info("ok about to insert processor!")
             
             self.db.processor_insert( 
                 user['user_id'],                                    
@@ -537,8 +523,7 @@ class AuthorizationModule( object ) :
                 Status.PENDING
             )
             
-            log.info("nice - done!!") 
-            
+           
             return self._format_submission_success() 
         
        
@@ -629,11 +614,7 @@ class AuthorizationModule( object ) :
         
             #contact the resource provider and fetch the access token  
             try:    
-		log.error("doing an access token checkup!")
-		log.error("processor is")
-		log.error(processor)
-		log.error("install is")
-		log.error(install)
+		
                 access_token = self._client_permit_request( processor, install )
             except PermitException, e:
                 #the processing request has been rejected by the resource_provider
@@ -654,7 +635,6 @@ class AuthorizationModule( object ) :
             
         
             auth_code = self._generate_access_code()
-            log.info("authcode is %s" % auth_code)
             
             result = self.db.processor_update( 
                 processor_id, 
@@ -688,7 +668,7 @@ class AuthorizationModule( object ) :
     
       
     def _client_permit_request( self, processor, install ):
-        log.info("in client permit request!") 
+        
         """
             Once the user has accepted an authorization request, the catalog
             must check that the resource provider is happy to permit the query 
@@ -706,7 +686,6 @@ class AuthorizationModule( object ) :
                         
         url = "%s/permit_processor" % (processor['resource_uri'],)
        
-        log.info("connect to %s" % url)
         #if necessary setup a proxy
         if ( self._WEB_PROXY ):
             proxy = urllib2.ProxyHandler( self._WEB_PROXY )
@@ -783,14 +762,9 @@ class AuthorizationModule( object ) :
                 return self._format_access_failure(
                     "invalid_request",
                     "A valid authorization code has not been provided"
-                )  
-
-           
-            
+                )     
             processor = self.db.processor_fetch_by_auth_code(auth_code)
-            log.info("got processor")
-            log.info(processor)
-            
+           
             if processor == None :
                 return self._format_access_failure(
                     "invalid_grant", 
@@ -803,7 +777,6 @@ class AuthorizationModule( object ) :
                     "No access token seems to be available for that code" 
                 )
             
-            log.info("returning %s" % self._format_access_success( processor["access_token"] ))
             
             return self._format_access_success( processor["access_token"] ) 
             
@@ -819,10 +792,7 @@ class AuthorizationModule( object ) :
     def client_registered(self, client_id, client_uri):
         
         client = self.db.client_fetch_by_id( client_id )
-        
-        log.info("got client")
-        log.info(client)
-        
+         
         if ( not client ) or client['client_uri'] != client_uri  :        
            return False
     
@@ -835,24 +805,20 @@ class AuthorizationModule( object ) :
 
         try:   
             
-            log.info("rejecting!")
+          
             #check that the user_id exists and is valid
             user = self.db.user_fetch_by_id( user_id )
 
             if not ( user ) :
                 return self._format_failure( 
                     "A valid user ID and has not been provided." )
-            log.info("got user!")
+            
             if not ( processor_id ) :        
                 return self._format_failure( 
                     "A valid processor ID and has not been provided." )
-            
-            log.info("got processor id")
-            
+                        
             #check that the processor_id exists and is pending
             processor = self.db.processor_fetch_by_id( processor_id )
-
-            log.info("got processor")
             
             if not ( processor ) :
                 return self._format_failure( 
@@ -866,7 +832,6 @@ class AuthorizationModule( object ) :
                 return self._format_failure( 
                     "This processing request has already been authorized." )   
             
-            log.info("deleting processor!")
             result = self.db.processor_delete( processor_id )
 
             if ( not result ):
@@ -877,8 +842,7 @@ class AuthorizationModule( object ) :
 
             #the processor has been revoked so build the redirect url that
             #will notify the client via the user's browser
-            log.info("sending something to client to let them know this has been rejected %s" % processor['client_uri'])
-
+           
             return self._format_revoke_success( 
                 processor['client_uri'],
                 processor['state'],
@@ -971,21 +935,15 @@ class AuthorizationModule( object ) :
             Once the user has revoked an authorization request, the catalog
             must tell the resource provider to deregister that query 
         """
-        log.info("about to call the resource provider %s" % install_token)
-        log.info(processor)
+       
         #build up the required data parameters for the communication
         data = urllib.urlencode( {
                 'install_token': install_token,
                 'access_token': processor['access_token']
             }
         )
-
-        log.info("am here %s" % data)
-        
-        
+  
         url = "%s/revoke_processor" % ( processor['resource_uri'] )
-
-        log.info("calling url %s" % url)        
 
         #if necessary setup a proxy
         if ( self._WEB_PROXY ):
@@ -1067,12 +1025,9 @@ class AuthorizationModule( object ) :
                 output.replace( '\r\n','\n' ), 
                 strict=False 
             )
-            log.info("parsed %s" % output)
             
         except:
             raise RevokeException( "Invalid json returned by the resource provider" )
-        
-        log.info("returning %s" % output)
         return output
         
 

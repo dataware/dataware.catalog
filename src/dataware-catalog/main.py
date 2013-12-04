@@ -888,8 +888,6 @@ if not PORT : PORT = 80
 if not ROOT_PAGE : ROOT_PAGE = "/"
 if not REALM : 
   REALM = "localhost:%s" % PORT
-  
-print REALM
 	
 #///////////////////////////////////////////////
 if __name__ == '__main__':      
